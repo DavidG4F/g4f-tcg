@@ -62,8 +62,8 @@ export default {
 
     // Règles
     booster: { size: 5, guaranteed: 'rare', mixTypes: true, openOnFirstVisit: true, allowRevealAll: false },
-    // Un booster gratuit toutes les 12 h : pour 110 cartes, la moitié des joueurs complètent en ~26 jours sans échange.
-    economy: { startCoins: 0, boosterPrice: 100, freeBooster: { start: 2, every: 720, max: 3 } },
+    // Un booster gratuit toutes les 10 min, réserve de 3 : il faut revenir souvent pour ne pas en perdre.
+    economy: { startCoins: 0, boosterPrice: 100, freeBooster: { start: 2, every: 10, max: 3 } },
     trade: { allowLastCopy: true, server: null },
     showcase: { size: 6 },
     // Calendrier de l'Avent : une case par jour à partir de start, une valeur par case = boosters offerts.
