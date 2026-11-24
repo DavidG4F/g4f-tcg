@@ -80,35 +80,64 @@ function snowLayer(className, count, { crystals, maxOpacity }) {
 
 // --- Congères ---
 
-/** Un petit tas de neige : un dôme arrondi et une épaule plus basse, dessiné sur 100 × 40 puis mis à sa taille. */
-function snowPile(seed) {
-    const shoulder = 16 + noise(seed + 1) * 10; // hauteur de l'épaule gauche (y : 0 en haut, 40 au sol)
-    const top = 2 + noise(seed + 2) * 7; // sommet du dôme
-    const right = 14 + noise(seed + 3) * 12; // petite bosse à droite
-    const d = `M0 40 C3 40 5 ${shoulder + 9} 15 ${shoulder}`
-        + ` C22 ${top + 8} 38 ${top} 52 ${top + 1}`
-        + ` C64 ${top + 2} 70 ${right - 5} 80 ${right}`
-        + ` C90 ${right + 4} 96 39 100 40 Z`;
-    const flip = noise(seed + 4) < 0.5 ? ' transform="translate(100 0) scale(-1 1)"' : ''; // l'épaule à gauche ou à droite
+/** Courbe lisse passant par tous les points [[x, y]] (Catmull-Rom convertie en courbes de Bézier). */
+function curveThrough(points) {
+    let d = `M${points[0][0]} ${points[0][1]}`;
+    for (let i = 0; i < points.length - 1; i++) {
+        const [p0, p1, p2, p3] = [points[i - 1] ?? points[i], points[i], points[i + 1], points[i + 2] ?? points[i + 1]];
+        const c1 = [p1[0] + (p2[0] - p0[0]) / 6, Math.min(40, p1[1] + (p2[1] - p0[1]) / 6)];
+        const c2 = [p2[0] - (p3[0] - p1[0]) / 6, Math.min(40, p2[1] - (p3[1] - p1[1]) / 6)];
+        d += ` C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+    }
+    return d;
+}
+
+/**
+ * Un tas de neige à plusieurs bosses, dessiné sur 100 × 40 (y : 0 en haut, 40 au sol) puis mis à sa taille.
+ * Une bosse principale, les autres plus basses ; les creux entre elles ne descendent pas jusqu'au sol.
+ */
+function snowPile(seed, bumps) {
+    const main = Math.floor(noise(seed) * bumps); // la plus haute
+    const peaks = [];
+    for (let i = 0; i < bumps; i++) {
+        const x = 16 + ((i + 0.5) / bumps) * 68 + (noise(seed + i * 3 + 1) - 0.5) * (18 / bumps);
+        const y = i === main ? 4 + noise(seed + i + 7) * 5 : 11 + noise(seed + i + 9) * 9;
+        peaks.push([x, y]);
+    }
+    const points = [[0, 40], [5, 33]];
+    peaks.forEach((peak, i) => {
+        points.push(peak);
+        const next = peaks[i + 1];
+        if (next) points.push([(peak[0] + next[0]) / 2, Math.max(peak[1], next[1]) + 3 + noise(seed + i + 13) * 5]); // creux doux
+    });
+    points.push([95, 33], [100, 40]);
     return `<svg viewBox="0 0 100 40" preserveAspectRatio="none">
         <defs><linearGradient id="snowpile-${seed}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.6" stop-color="#eef3f8"/><stop offset="1" stop-color="#cfd9e5"/></linearGradient></defs>
-        <path fill="url(#snowpile-${seed})" d="${d}"${flip}/>
+        <path fill="url(#snowpile-${seed})" d="${curveThrough(points)} Z"/>
     </svg>`;
 }
 
-/** Petits tas de neige espacés le long du bas de l'écran, de tailles variées. Leur position est en % : ils suivent la largeur. */
+/**
+ * Quelques tas de neige le long du bas de l'écran, posés de gauche à droite : largeurs, hauteurs, nombre de bosses
+ * et écarts tirés au hasard (toujours les mêmes d'une visite à l'autre), avec de grands vides entre eux.
+ * Leur position est gardée en % : ils suivent la largeur si la fenêtre change.
+ */
 function snowPiles() {
-    const isSmall = window.innerWidth < 600;
-    const count = isSmall ? 4 : Math.round(Math.min(9, window.innerWidth / 190));
+    const screen = window.innerWidth;
+    const isSmall = screen < 600;
+    const [minWidth, maxWidth, maxHeight, minGap, maxGap] = isSmall ? [90, 155, 34, 45, 150] : [160, 340, 62, 90, 360];
     const piles = [];
-    for (let i = 0; i < count; i++) {
-        const width = (isSmall ? 40 : 50) + noise(i * 3 + 1) * (isSmall ? 36 : 85);
-        const pile = el('span', 'snowpile', { innerHTML: snowPile(i * 7 + 2) });
-        // Réparti sur la largeur, un peu décalé au hasard pour ne pas faire une rangée régulière, sans se toucher
-        const left = ((i + 0.5) / count) * 100 + (noise(i * 5 + 3) - 0.5) * (25 / count);
+    let x = noise(97) * (isSmall ? 40 : 120); // bord gauche du prochain tas
+    for (let i = 0; x < screen - minWidth / 2; i++) {
+        const width = minWidth + noise(i * 3 + 1) * (maxWidth - minWidth);
+        const bumps = 2 + Math.floor(noise(i * 23 + 8) * (width > (isSmall ? 130 : 250) ? 3 : 2)); // 2 à 4 bosses
+        const height = Math.min(maxHeight, width * (0.11 + noise(i * 11 + 4) * 0.08));
+        const center = x + width / 2;
         const half = Math.round(width / 2); // le tas reste entier dans l'écran
-        pile.style.cssText = `left:clamp(${half}px, ${left.toFixed(1)}%, calc(100% - ${half}px));width:${Math.round(width)}px;height:${Math.round(width * (0.26 + noise(i * 11) * 0.14))}px`;
+        const pile = el('span', 'snowpile', { innerHTML: snowPile(i * 7 + 2, bumps) });
+        pile.style.cssText = `left:clamp(${half}px, ${((center / screen) * 100).toFixed(2)}%, calc(100% - ${half}px));width:${Math.round(width)}px;height:${Math.round(height)}px`;
         piles.push(pile);
+        x += width + minGap + noise(i * 19 + 2) ** 1.2 * (maxGap - minGap); // écarts inégaux, parfois très grands
     }
     return piles;
 }
