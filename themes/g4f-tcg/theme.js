@@ -56,6 +56,7 @@ export default {
         { id: 'team', label: 'La team' },
         { id: 'matos', label: 'Le matos' },
         { id: 'moment', label: 'Moment' },
+	{ id: 'item', label: 'Les objets' },
     ],
     albums,
     tags: [],
