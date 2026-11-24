@@ -616,16 +616,27 @@ button.label-chip:focus-visible { outline: 2px solid var(--accent); outline-offs
 
 /* Neige derrière tout le contenu : elle ne passe que dans les espaces vides */
 .snow { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-.snow__flake { position: absolute; top: -1rem; border-radius: 50%; background: #ffffff; box-shadow: 0 0 4px rgba(255, 255, 255, 0.6); animation: snowfall linear infinite; }
+.snow__flake { position: absolute; top: -1.5rem; border-radius: 50%; background: #ffffff; box-shadow: 0 0 4px rgba(255, 255, 255, 0.6); animation: snowfall linear infinite; }
+.snow__flake--crystal { border-radius: 0; background: none; box-shadow: none; color: #ffffff; line-height: 1; text-shadow: 0 0 6px rgba(255, 255, 255, 0.5); animation-name: snowfall-spin; }
+/* Quelques flocons devant le contenu, sous la bannière et le solde */
+.snow--front { z-index: 35; }
 
-/* Guirlande accrochée sous la bannière */
-.lights { position: absolute; top: 100%; left: 0; right: 0; display: flex; gap: 1.75rem; height: 1.5rem; padding-left: 0.875rem; overflow: hidden; pointer-events: none; }
-.lights__bulb { --bulb: var(--accent-strong); position: relative; flex: none; width: 0.4375rem; height: 0.6875rem; margin-top: 0.125rem; border-radius: 50% 50% 45% 45% / 40% 40% 60% 60%; background: var(--bulb); box-shadow: 0 0 0.625rem var(--bulb); animation: lights-twinkle 2.2s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.37s); }
-.lights__bulb::before { content: ""; position: absolute; top: -0.1875rem; left: 50%; width: 0.25rem; height: 0.1875rem; border-radius: 1px; background: var(--border); translate: -50% 0; }
-.lights__bulb:nth-child(odd) { margin-top: 0.3125rem; } /* la guirlande ondule */
-.lights__bulb:nth-child(4n + 2) { --bulb: var(--coin); }
-.lights__bulb:nth-child(4n + 3) { --bulb: var(--success); }
-.lights__bulb:nth-child(4n + 4) { --bulb: #f8fafc; }
+/* Guirlande en festons, accrochée sous la bannière (positions calculées par festive.js) */
+.lights { position: absolute; top: 100%; left: 0; right: 0; height: 3.25rem; overflow: clip; pointer-events: none; } /* les nœuds des bords ne débordent pas de l'écran */
+.lights__wire { position: absolute; top: 0; left: 0; overflow: visible; }
+.lights__wire path { fill: none; stroke: color-mix(in srgb, var(--success) 35%, #0b1a10); stroke-width: 2; stroke-linecap: round; }
+.lights__knot { position: absolute; top: 0; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--accent-strong); box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 35%, #0b1a10); translate: -50% 0; }
+.lights__bulb { position: absolute; width: 0.4375rem; height: 0.6875rem; margin-top: 0.1875rem; border-radius: 50% 50% 45% 45% / 40% 40% 60% 60%; background: var(--bulb); box-shadow: 0 0 0.625rem var(--bulb); transform-origin: 50% -0.1875rem; translate: -50% 0; animation: lights-twinkle 2.2s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.37s); }
+.lights__bulb::before { content: ""; position: absolute; top: -0.1875rem; left: 50%; width: 0.25rem; height: 0.1875rem; border-radius: 1px; background: #4b5563; translate: -50% 0; }
+
+/* Congères : en bas de l'écran, et collées aux bords gauche et droit. Sous le solde et la bannière. */
+.snowbank { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: clamp(3.5rem, 8vw, 6.5rem); pointer-events: none; filter: drop-shadow(0 -0.25rem 0.75rem rgba(255, 255, 255, 0.18)); }
+.snowbank svg { display: block; width: 100%; height: 100%; }
+.snowbank__back { fill: #d3dde8; }
+.snowdrift { position: fixed; top: 0; bottom: 0; z-index: 30; width: clamp(0.75rem, 2.6vw, 2.5rem); pointer-events: none; filter: drop-shadow(0 0 0.375rem rgba(255, 255, 255, 0.15)); }
+.snowdrift svg { display: block; width: 100%; height: 100%; }
+.snowdrift--left { left: 0; }
+.snowdrift--right { right: 0; transform: scaleX(-1); }
 
 /* Une lueur froide derrière le titre, deux flocons autour du slogan */
 .is-christmas .page__hero { background: radial-gradient(ellipse 60% 70% at 50% 40%, rgba(255, 255, 255, 0.06), transparent 70%); }
@@ -688,6 +699,7 @@ button.label-chip:focus-visible { outline: 2px solid var(--accent); outline-offs
 @keyframes advent-glow { to { box-shadow: 0 0 0 2px var(--coin), 0 0 2.25rem color-mix(in srgb, var(--coin) 75%, transparent); } }
 @keyframes advent-pop { 40% { transform: scale(1.12); } }
 @keyframes snowfall { to { transform: translate(var(--drift), calc(100vh + 2rem)); } }
+@keyframes snowfall-spin { to { transform: translate(var(--drift), calc(100vh + 2rem)) rotate(360deg); } }
 @keyframes lights-twinkle { from { opacity: 0.45; box-shadow: 0 0 0.125rem var(--bulb); } to { opacity: 1; box-shadow: 0 0 0.75rem 0.125rem var(--bulb); } }
 
 @media (prefers-reduced-motion: reduce) {
