@@ -12,10 +12,10 @@
 - **Albums :** définis dans `data/albums.csv`.
 - **Raretés (id, poids, couleur) :** Commune (`commune`, 60, gris) · Rare (`rare`, 27, bleu) · Ultra rare (`ultra`, 10, violet) · Légendaire (`legendaire`, 3, or).
 - **Attribution des raretés :** colonne `rarity` du tableur. Répartition conseillée : 50 % / 30 % / 15 % / 5 %, au moins 2 légendaires.
-- **Booster :** 5 cartes, la dernière au moins Rare ; 2 gratuits au départ, puis 1 toutes les 12 h, réserve de 3 ; 100 pièces à l'achat.
+- **Booster :** 5 cartes, la dernière au moins Rare ; 2 gratuits au départ, puis 1 toutes les 10 min, réserve de 3 ; 100 pièces à l'achat.
 - **Monnaie :** pièces ; revente des doubles 5 / 12 / 30 / 75 ; prime de découverte 5 / 10 / 25 / 60.
 - **Calendrier de l'Avent :** du 1er au 24 décembre 2026, une case par jour, ouvrable une fois ; les cases oubliées restent ouvrables jusqu'au 31 janvier 2027. 58 boosters offerts en tout, de 1 à 5 par case (5 le 24), mêmes nombres pour tous. Réglage : `advent` dans `theme.js`.
-- **Durée visée pour tout compléter :** un mois sans échange. Simulation à 110 cartes, pour la moitié des joueurs : 26 jours sans le calendrier, environ 13 jours en démarrant le 1er décembre avec le calendrier.
+- **Durée pour tout compléter :** avec un booster gratuit toutes les 10 min (réserve de 3), c'est la fréquence des visites qui compte : un joueur assidu complète 110 cartes en quelques heures de jeu cumulées, un joueur qui passe deux fois par jour gagne environ 6 boosters par jour. (Avec l'ancien réglage de 12 h : 26 jours pour la moitié des joueurs.)
 - **Échanges :** oui, via PeerJS (service public) ; on peut échanger son exemplaire unique.
 - **Vitrine :** 6 places.
 - **Base de données :** tableur CSV, modifié par toute personne ayant accès au dépôt.

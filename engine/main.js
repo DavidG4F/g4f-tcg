@@ -44,6 +44,13 @@ function gameClock() {
     return () => Date.now() + offset;
 }
 
+/** Compte à rebours : 9:05 sous une heure, 7:29:45 au-delà. */
+function formatCountdown(seconds) {
+    const pad = (n) => String(n).padStart(2, '0');
+    const [hours, minutes] = [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60)];
+    return hours ? `${hours}:${pad(minutes)}:${pad(seconds % 60)}` : `${minutes}:${pad(seconds % 60)}`;
+}
+
 function setIcon() {
     const color = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
     const svg = motifSource().replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"').replaceAll('currentColor', color);
@@ -306,7 +313,7 @@ function start(theme) {
         const free = player.freeBoosters;
         const canOpen = player.canOpenBooster;
         const seconds = Math.ceil(player.nextFreeIn / 1000);
-        const countdown = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+        const countdown = formatCountdown(seconds);
         const state = `${player.coins}|${free}|${free ? '' : countdown}`;
         if (state === shownBalance) return;
         shownBalance = state;
