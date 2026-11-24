@@ -66,6 +66,15 @@ export default {
     economy: { startCoins: 0, boosterPrice: 100, freeBooster: { start: 2, every: 720, max: 3 } },
     trade: { allowLastCopy: true, server: null },
     showcase: { size: 6 },
+    // Calendrier de l'Avent : une case par jour à partir de start, une valeur par case = boosters offerts.
+    // Les cases oubliées restent ouvrables jusqu'à end inclus. Ne pas changer start pendant le calendrier :
+    // les cases déjà ouvertes sont enregistrées pour cette date de départ.
+    advent: {
+        start: '2026-12-01',
+        end: '2027-01-31',
+        //        1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+        boosters: [1, 1, 1, 2, 1, 2, 3, 1, 2, 2, 3, 1, 4, 2, 3, 2, 4, 3, 2, 4, 3, 4, 2, 5],
+    },
     texts: {},
 
     cards,

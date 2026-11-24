@@ -1,4 +1,5 @@
 // Charge un thème, vérifie qu'il est complet et complète ce qu'il ne précise pas. Voir themes/cosmos/theme.js pour un exemple.
+import { isDay, parseDay } from './calendar.js';
 import { MOTIFS } from './motif.js';
 
 const EFFECTS = ['none', 'glow', 'burst', 'legend'];
@@ -72,6 +73,20 @@ export function checkTheme(theme) {
     need(Number.isInteger(showcase.size) && showcase.size > 0, 'showcase.size : nombre de cartes attendu');
     const free = { ...DEFAULT_ECONOMY.freeBooster, ...economy.freeBooster };
     need(isAmount(free.start) && isPositive(free.every) && isAmount(free.max), 'economy.freeBooster : start, every et max attendus');
+
+    // Calendrier de l'Avent, facultatif : { start: 'AAAA-MM-JJ', end: 'AAAA-MM-JJ', boosters: [boosters de chaque case] }
+    const { advent } = theme;
+    if (advent !== undefined && advent !== null) {
+        const isList = Array.isArray(advent.boosters) && advent.boosters.length > 0;
+        need(isList && advent.boosters.every((count) => Number.isInteger(count) && count > 0), 'advent.boosters : un nombre entier positif par case attendu');
+        need(isDay(advent.start), 'advent.start : date AAAA-MM-JJ attendue');
+        need(isDay(advent.end), 'advent.end : date AAAA-MM-JJ attendue');
+        if (isList && isDay(advent.start) && isDay(advent.end)) {
+            const start = parseDay(advent.start);
+            const last = new Date(start.getFullYear(), start.getMonth(), start.getDate() + advent.boosters.length - 1);
+            need(parseDay(advent.end) >= last, 'advent.end : doit être le jour de la dernière case ou après');
+        }
+    }
     return errors;
 }
 
@@ -100,6 +115,7 @@ export async function loadTheme(name) {
         fonts: {},
         pack: {},
         motif: 'star',
+        advent: null,
         ...theme,
         logo: asset(theme.logo),
         rarities,

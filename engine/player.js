@@ -1,5 +1,6 @@
-// Sauvegarde du joueur, gardée dans son navigateur : cartes possédées, pièces, boosters gratuits,
-// favoris, étiquettes et vitrine.
+// Sauvegarde du joueur, gardée dans son navigateur : cartes possédées, pièces, boosters gratuits et offerts,
+// calendrier de l'Avent, favoris, étiquettes et vitrine.
+import { adventDays, adventStatus } from './calendar.js';
 
 export const NAME_LENGTH = 20;
 export const TITLE_LENGTH = 40;
@@ -14,9 +15,10 @@ export class Player {
     #favorites = new Set();
     #labelled = new Map(); // carte → ensemble d'identifiants d'étiquettes
     #showcase = []; // cartes exposées, même celles qu'on n'a plus
+    #advent = new Set(); // numéros des cases du calendrier déjà ouvertes
     #now;
 
-    /** rules : { gameId, economy, trade, showcase }, tirés du thème. now est remplaçable pour les tests. */
+    /** rules : { gameId, economy, trade, showcase, advent }, tirés du thème. now est remplaçable pour les tests. */
     constructor(cards, rules, now = Date.now) {
         this.cards = cards;
         this.rules = rules;
@@ -36,6 +38,8 @@ export class Player {
         this.#favorites.clear();
         this.#labelled.clear();
         this.#showcase = [];
+        this.#advent.clear();
+        this.gifts = 0; // boosters offerts (calendrier) : sans plafond, ouverts après les gratuits
         this.showcaseTitle = '';
         this.labels = []; // { id, name, color }
         this.isFirstVisit = true;
@@ -57,6 +61,12 @@ export class Player {
             for (const card of this.cards) if (this.has(card) || saved.known?.includes?.(card.id)) this.#known.add(card);
             if (Number.isFinite(saved.coins) && saved.coins >= 0) this.coins = saved.coins;
             if (Number.isInteger(saved.free?.stock) && Number.isFinite(saved.free?.at)) this.free = saved.free;
+            if (Number.isInteger(saved.gifts) && saved.gifts >= 0) this.gifts = saved.gifts;
+            // Les cases ouvertes ne valent que pour le calendrier en cours : un nouveau calendrier repart de zéro.
+            const advent = this.rules.advent;
+            if (advent && saved.advent?.start === advent.start && Array.isArray(saved.advent.opened)) {
+                for (const day of saved.advent.opened) if (Number.isInteger(day) && day >= 1 && day <= advent.boosters.length) this.#advent.add(day);
+            }
             if (typeof saved.id === 'string') this.id = saved.id;
             if (typeof saved.name === 'string') this.name = saved.name;
             this.#loadSorting(saved);
@@ -84,6 +94,8 @@ export class Player {
                 known: [...this.#known].map((card) => card.id),
                 coins: this.coins,
                 free: this.free,
+                gifts: this.gifts,
+                advent: this.rules.advent ? { start: this.rules.advent.start, opened: [...this.#advent] } : undefined,
                 id: this.id,
                 name: this.name,
                 favorites: [...this.#favorites].map((card) => card.id),
@@ -179,9 +191,10 @@ export class Player {
         else if (gained > 0) this.free = { stock: this.free.stock + gained, at: this.free.at + gained * period };
     }
 
+    /** Boosters qui s'ouvrent sans payer : gratuits et offerts. */
     get freeBoosters() {
         this.#refill();
-        return this.free.stock;
+        return this.free.stock + this.gifts;
     }
 
     /** Millisecondes avant le prochain booster gratuit, 0 si la réserve est pleine. */
@@ -195,13 +208,39 @@ export class Player {
         return this.freeBoosters > 0 || this.coins >= this.rules.economy.boosterPrice;
     }
 
-    /** Paie un booster, gratuit si possible. Renvoie false si c'est impossible. */
+    /**
+     * Paie un booster : gratuit d'abord (sa réserve est plafonnée, l'entamer relance la recharge),
+     * puis offert, puis en pièces. Renvoie false si c'est impossible.
+     */
     payBooster() {
         if (!this.canOpenBooster) return false;
         if (this.free.stock > 0) this.free = { ...this.free, stock: this.free.stock - 1 };
+        else if (this.gifts > 0) this.gifts--;
         else this.coins -= this.rules.economy.boosterPrice;
         this.save();
         return true;
+    }
+
+    // --- Calendrier de l'Avent ---
+
+    /** Cases du calendrier, avec leur état : voir calendar.js. Vide si le thème n'a pas de calendrier. */
+    get adventDays() {
+        return adventDays(this.rules.advent, this.#now(), this.#advent);
+    }
+
+    /** 'none', 'soon', 'open' ou 'over' : voir calendar.js. */
+    get adventStatus() {
+        return adventStatus(this.rules.advent, this.#now());
+    }
+
+    /** Ouvre une case, si son jour est venu et qu'elle ne l'a pas déjà été. Renvoie le nombre de boosters reçus, 0 sinon. */
+    openAdvent(day) {
+        const box = this.adventDays.find((other) => other.day === day);
+        if (!box?.canOpen) return 0;
+        this.#advent.add(day);
+        this.gifts += box.boosters;
+        this.save();
+        return box.boosters;
     }
 
     // --- Revente ---

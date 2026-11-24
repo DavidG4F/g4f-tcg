@@ -1,5 +1,7 @@
 // Point d'entrée : charge le thème, construit la page et relie les cartes, les boosters et les échanges.
+import { createAdvent } from './advent.js';
 import { createBooster } from './booster.js';
+import { isDay, parseDay, startOfDay } from './calendar.js';
 import { actionButton, coins, createCard, el, text } from './card.js';
 import { createDetail } from './detail.js';
 import { drawBooster } from './draw.js';
@@ -25,6 +27,20 @@ function segmented(options, selected, onPick) {
     const group = el('div', 'segmented', {}, ...buttons);
     group.setAttribute('role', 'group');
     return group;
+}
+
+const GIFT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>';
+
+/**
+ * Horloge du jeu. Sur un serveur local seulement, ?date=AAAA-MM-JJ simule un autre jour pour essayer le calendrier ;
+ * en ligne, ce paramètre est ignoré.
+ */
+function gameClock() {
+    const value = new URLSearchParams(location.search).get('date');
+    const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+    if (!isLocal || !isDay(value)) return Date.now;
+    const offset = parseDay(value).getTime() - startOfDay(Date.now()).getTime();
+    return () => Date.now() + offset;
 }
 
 function setIcon() {
@@ -74,7 +90,7 @@ function start(theme) {
     const { rarities } = theme;
     const { bar, albumBar, filters, empty, sections } = buildPage(theme);
     const cards = theme.cards.map((card) => ({ ...card, node: el('div', 'tile'), isShown: null }));
-    const player = new Player(cards, { gameId: theme.id, economy: theme.economy, trade: theme.trade, showcase: theme.showcase });
+    const player = new Player(cards, { gameId: theme.id, economy: theme.economy, trade: theme.trade, showcase: theme.showcase, advent: theme.advent }, gameClock());
     const newCards = new Set(); // découvertes pendant cette visite
 
     // --- Grilles : seules les cartes possédées sont visibles ---
@@ -212,6 +228,8 @@ function start(theme) {
     sellButton.append(' ', sellValue);
     const showcaseButton = actionButton('showcase_mine', 'booster__btn', () => showcase.open());
     const tradeButton = actionButton('trade_open', 'booster__btn', () => trade.open());
+    const adventBadge = el('span', 'advent-btn__badge');
+    const adventButton = actionButton('advent_open', 'booster__btn', () => advent.open(), adventBadge);
     const revealLink = actionButton('cards_reveal_all', 'booster__link', revealAll);
     const resetLink = actionButton('cards_reset', 'booster__link', () => {
         if (!window.confirm(t('cards_reset_confirm'))) return;
@@ -226,10 +244,14 @@ function start(theme) {
     const hudPrice = el('span', 'hud__price');
     const hudButton = el('button', 'floating-booster', { type: 'button' }, motif(), text('span', '', 'cards_open_booster'), hudPrice);
     hudButton.addEventListener('click', () => booster.open());
-    document.body.append(el('div', 'hud', {}, balance, hudButton));
+    // Rappel du calendrier, visible seulement quand une case attend d'être ouverte.
+    const hudAdventBadge = el('span', 'advent-btn__badge');
+    const hudAdvent = el('button', 'hud__advent', { type: 'button', innerHTML: GIFT_ICON }, hudAdventBadge);
+    hudAdvent.addEventListener('click', () => advent.open());
+    document.body.append(el('div', 'hud', {}, balance, hudButton, hudAdvent));
 
     const label = el('p', 'collection__label', {}, text('span', '', 'cards_collection'), ' ', count);
-    bar.append(el('div', 'collection__main', {}, label, progress, chips), el('div', 'collection__actions', {}, openButton, tradeButton, showcaseButton, sellButton, revealLink, resetLink));
+    bar.append(el('div', 'collection__main', {}, label, progress, chips), el('div', 'collection__actions', {}, openButton, adventButton, tradeButton, showcaseButton, sellButton, revealLink, resetLink));
 
     function update() {
         cards.forEach(showCard);
@@ -250,6 +272,22 @@ function start(theme) {
         revealLink.hidden = player.isComplete || !theme.booster.allowRevealAll;
         resetLink.hidden = player.discovered === 0;
         showBalance();
+        showAdvent();
+    }
+
+    let shownAdvent = '';
+    /** Bouton du calendrier, pendant le calendrier et juste avant, avec le nombre de cases à ouvrir ; rappelé chaque seconde. */
+    function showAdvent() {
+        const status = player.adventStatus;
+        const ready = status === 'open' ? player.adventDays.filter((box) => box.canOpen).length : 0;
+        const state = `${status}|${ready}`;
+        if (state === shownAdvent) return;
+        shownAdvent = state;
+        adventButton.hidden = status === 'none' || status === 'over';
+        adventBadge.hidden = hudAdventBadge.hidden = !ready;
+        adventBadge.textContent = hudAdventBadge.textContent = ready;
+        hudAdvent.hidden = !ready;
+        hudAdvent.setAttribute('aria-label', `${t('advent_open')} : ${ready} ${t('advent_ready')}`);
     }
 
     let shownBalance = '';
@@ -269,7 +307,10 @@ function start(theme) {
         else if (canOpen) hudPrice.replaceChildren(coins(theme.economy.boosterPrice));
         else hudPrice.replaceChildren(text('span', '', 'booster_next'), ` ${countdown}`);
     }
-    setInterval(showBalance, 1000);
+    setInterval(() => {
+        showBalance();
+        showAdvent(); // une nouvelle case à minuit
+    }, 1000);
 
     function revealAll() {
         player.revealAll();
@@ -314,6 +355,15 @@ function start(theme) {
             received(results);
             update();
         },
+    });
+
+    // --- Calendrier de l'Avent ---
+
+    const advent = createAdvent({
+        player,
+        language: theme.language,
+        onChange: update,
+        onPlay: () => booster.open(),
     });
 
     // --- Vitrine ---

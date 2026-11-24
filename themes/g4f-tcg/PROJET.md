@@ -14,12 +14,19 @@
 - **Attribution des raretés :** colonne `rarity` du tableur. Répartition conseillée : 50 % / 30 % / 15 % / 5 %, au moins 2 légendaires.
 - **Booster :** 5 cartes, la dernière au moins Rare ; 2 gratuits au départ, puis 1 toutes les 12 h, réserve de 3 ; 100 pièces à l'achat.
 - **Monnaie :** pièces ; revente des doubles 5 / 12 / 30 / 75 ; prime de découverte 5 / 10 / 25 / 60.
-- **Durée visée pour tout compléter :** un mois sans échange (simulation à 110 cartes : 26 jours pour la moitié des joueurs).
+- **Calendrier de l'Avent :** du 1er au 24 décembre 2026, une case par jour, ouvrable une fois ; les cases oubliées restent ouvrables jusqu'au 31 janvier 2027. 58 boosters offerts en tout, de 1 à 5 par case (5 le 24), mêmes nombres pour tous. Réglage : `advent` dans `theme.js`.
+- **Durée visée pour tout compléter :** un mois sans échange. Simulation à 110 cartes, pour la moitié des joueurs : 26 jours sans le calendrier, environ 13 jours en démarrant le 1er décembre avec le calendrier.
 - **Échanges :** oui, via PeerJS (service public) ; on peut échanger son exemplaire unique.
 - **Vitrine :** 6 places.
 - **Base de données :** tableur CSV, modifié par toute personne ayant accès au dépôt.
 - **Publication :** GitHub Pages, site à la racine du dépôt.
 - **Ce qui reste à décider :** liste définitive des albums et des cartes ; images ; dépôt GitHub public ou privé.
+
+## Calendrier de l'Avent
+
+- Boosters par case : la liste `advent.boosters` de `theme.js`, dans l'ordre des jours (première valeur = 1er décembre).
+- Ne pas changer `advent.start` une fois le calendrier commencé : les cases déjà ouvertes seraient oubliées et pourraient être rouvertes.
+- Pour l'essayer à une autre date, en local seulement : `http://localhost:3000/?date=2026-12-10`.
 
 ## Ajouter ou modifier des cartes
 

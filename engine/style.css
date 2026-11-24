@@ -534,6 +534,66 @@ button.label-chip:focus-visible { outline: 2px solid var(--accent); outline-offs
     .showcase__shelf { --card: min(9.5rem, 41vw); gap: 1.5rem 1rem; }
 }
 
+/* ---------- Calendrier de l'Avent ---------- */
+
+.advent { position: fixed; inset: 0; z-index: 900; overflow-x: hidden; overflow-y: auto; background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--coin) 14%, var(--background-glow)), var(--background) 62%); outline: none; animation: booster-in 0.3s ease-out; }
+.advent__layout { display: flex; flex-direction: column; align-items: center; max-width: 46rem; min-height: 100%; margin: 0 auto; padding: 2.25rem 1.5rem 0; text-align: center; }
+.advent__title { padding: 0 3rem; font-size: clamp(1.75rem, 5vw, 2.75rem); font-weight: 700; line-height: 1.15; text-wrap: balance; }
+.advent__intro { max-width: 34rem; margin: 0.75rem auto 0; color: var(--text-soft); text-wrap: balance; }
+/* 5 colonnes : 23 portes et la dernière, en double largeur */
+/* Assez petite pour tenir dans la hauteur de l'écran avec le titre et le bouton, sans descendre sous 18rem */
+.advent__grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-flow: dense; gap: clamp(0.5rem, 2vw, 1rem); width: min(100%, max(18rem, min(36rem, 100vh - 19rem))); margin: 1.75rem 0 1rem; }
+.advent__door { position: relative; aspect-ratio: 1; border-radius: 0.75rem; perspective: 40rem; container-type: inline-size; }
+.advent__door--last { grid-column: span 2; aspect-ratio: auto; }
+.advent__door:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.advent__inside { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; border-radius: inherit; background: radial-gradient(circle, color-mix(in srgb, var(--coin) 28%, transparent), transparent 70%), var(--background); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--coin) 40%, transparent); }
+.advent__inside .motif { width: 36%; height: 26%; color: var(--pack-motif); }
+.advent__door--last .advent__inside .motif { width: 18%; }
+.advent__amount { color: var(--coin); font-size: max(0.9375rem, 20cqw); line-height: 1; }
+.advent__door--last .advent__amount { font-size: max(1.25rem, 12cqw); }
+.advent__unit { color: var(--text-soft); font-size: max(0.625rem, 10cqw); line-height: 1; }
+.advent__door--last .advent__unit { font-size: max(0.75rem, 6cqw); }
+.advent__leaf {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: inherit;
+    background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.14), transparent 55%), linear-gradient(160deg, var(--pack-1), var(--pack-2) 60%, var(--pack-3));
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.35);
+    transform-origin: left center;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transition: transform 0.8s cubic-bezier(0.3, 0.7, 0.3, 1), opacity 0.8s;
+}
+.advent__leaf::before { content: ""; position: absolute; inset: 7%; border: 1px dashed rgba(255, 255, 255, 0.28); border-radius: 0.5rem; }
+.advent__door--last .advent__leaf { border-color: color-mix(in srgb, var(--coin) 60%, transparent); background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.2), transparent 55%), linear-gradient(160deg, color-mix(in srgb, var(--coin) 45%, var(--pack-1)), var(--pack-2) 65%, var(--pack-3)); }
+.advent__number { color: var(--on-pack); font: 700 max(1.125rem, 34cqw) / 1 var(--font-heading); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); }
+.advent__door--last .advent__number { font-size: max(1.5rem, 22cqw); }
+.advent__door[data-state="locked"] { cursor: default; }
+.advent__door[data-state="locked"] .advent__leaf { filter: saturate(0.35) brightness(0.65); }
+.advent__door[data-state="ready"] .advent__leaf { box-shadow: 0 0 0 2px var(--coin), 0 0 1.25rem color-mix(in srgb, var(--coin) 55%, transparent); animation: advent-glow 1.6s ease-in-out infinite alternate; }
+.advent__door[data-state="ready"]:hover .advent__leaf { transform: rotateY(-16deg); }
+.advent__door[data-state="opened"] .advent__leaf { transform: rotateY(-104deg); opacity: 0.55; pointer-events: none; animation: none; }
+.advent__door.is-opening { z-index: 2; animation: advent-pop 0.6s 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+/* Message et bouton restent visibles en bas, même quand la grille dépasse */
+.advent__footer { position: sticky; bottom: 0; z-index: 3; display: grid; gap: 0.75rem; width: 100%; margin-top: auto; padding: 1rem 0 1.5rem; background: linear-gradient(transparent, var(--background) 35%); }
+.advent__message { min-height: 1.5em; color: var(--text-soft); }
+
+.advent-btn__badge { margin-left: 0.5rem; padding: 0 0.5rem; border-radius: 999px; background: var(--coin); color: var(--on-accent); font-size: 0.8125rem; font-weight: 700; }
+.hud__advent { position: relative; display: grid; place-items: center; width: 3rem; height: 3rem; border: 1px solid color-mix(in srgb, var(--coin) 60%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--background) 92%, transparent); color: var(--coin); box-shadow: 0 0 1rem color-mix(in srgb, var(--coin) 35%, transparent); transition: transform 0.2s; }
+.hud__advent:hover { transform: translateY(-2px); }
+.hud__advent:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.hud__advent svg { width: 1.375rem; height: 1.375rem; }
+.hud__advent .advent-btn__badge { position: absolute; top: -0.375rem; right: -0.375rem; margin: 0; }
+
+@media (max-width: 768px) {
+    .advent__layout { padding: 1.5rem 1rem 0; }
+    .hud__advent { width: 2.625rem; height: 2.625rem; }
+}
+
 /* ---------- Barre de collection ---------- */
 
 .collection { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; margin-bottom: 2rem; padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: 0.75rem; background: color-mix(in srgb, var(--surface) 60%, transparent); }
@@ -588,8 +648,10 @@ button.label-chip:focus-visible { outline: 2px solid var(--accent); outline-offs
 @keyframes motif-pulse { from { transform: scale(0.75); opacity: 0.5; } to { transform: scale(1.05); } }
 @keyframes spin { to { rotate: 360deg; } }
 @keyframes flash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
+@keyframes advent-glow { to { box-shadow: 0 0 0 2px var(--coin), 0 0 2.25rem color-mix(in srgb, var(--coin) 75%, transparent); } }
+@keyframes advent-pop { 40% { transform: scale(1.12); } }
 
 @media (prefers-reduced-motion: reduce) {
-    .booster, .booster *, .booster::after, .floating-booster, .detail, .detail *, .trade, .trade *, .showcase, .showcase * { animation: none !important; transition: none !important; }
+    .booster, .booster *, .booster::after, .floating-booster, .detail, .detail *, .trade, .trade *, .showcase, .showcase *, .advent, .advent *, .hud__advent { animation: none !important; transition: none !important; }
     .fx { display: none; }
 }

@@ -122,6 +122,20 @@ export const STRINGS = {
     showcase_owned: 'Vous l\'avez',
     showcase_missing: 'Il vous manque',
     showcase_close: 'Voir ma collection',
+    advent_open: 'Calendrier de l\'Avent',
+    advent_title: 'Calendrier de l\'Avent',
+    advent_intro: 'Chaque jour, une nouvelle case s\'ouvre, avec des boosters à l\'intérieur.',
+    advent_until: 'Une case oubliée ? Elle vous attend jusqu\'au',
+    advent_soon: 'Le calendrier ouvre le',
+    advent_over: 'Le calendrier est terminé. Rendez-vous l\'année prochaine !',
+    advent_day: 'Case',
+    advent_locked: 'Patience : cette case s\'ouvre le',
+    advent_opened: 'Déjà ouverte',
+    advent_booster: 'booster',
+    advent_boosters: 'boosters',
+    advent_got: 'Vous recevez',
+    advent_ready: 'case(s) à ouvrir',
+    advent_play: 'Ouvrir mes boosters',
 };
 
 let themeTexts = {};
