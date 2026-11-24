@@ -201,7 +201,8 @@ export default [
         "name": "Coralie",
         "album": "team",
         "type": "team",
-        "rarity": "ultra"
+        "rarity": "ultra",
+        "text": "je pars de la réu parce que ça devient trop technique"
     },
     {
         "id": "victor",

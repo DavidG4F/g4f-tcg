@@ -11,5 +11,9 @@ export default [
     {
         "id": "moments",
         "label": "Les grands moments"
+    },
+    {
+        "id": "item",
+        "label": "Les objets"
     }
 ];
