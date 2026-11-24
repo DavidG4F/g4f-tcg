@@ -53,8 +53,8 @@ export default {
     ],
     // Types : leur id est celui de la colonne type de data/cards.csv.
     types: [
-        { id: 'membre', label: 'Membre' },
-        { id: 'materiel', label: 'Matériel' },
+        { id: 'team', label: 'La team' },
+        { id: 'matos', label: 'Le matos' },
         { id: 'moment', label: 'Moment' },
     ],
     albums,
