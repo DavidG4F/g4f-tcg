@@ -1,12 +1,12 @@
 // Produit par tools/import-cards.mjs : modifier les CSV de data/, pas ce fichier.
 export default [
     {
-        "id": "equipe",
-        "label": "L'équipe"
+        "id": "team",
+        "label": "La team"
     },
     {
-        "id": "materiel",
-        "label": "Le matériel"
+        "id": "matos",
+        "label": "Le matos"
     },
     {
         "id": "moments",
