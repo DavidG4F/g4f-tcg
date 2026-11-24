@@ -1,62 +1,10 @@
 // Produit par tools/import-cards.mjs : modifier les CSV de data/, pas ce fichier.
 export default [
     {
-        "id": "nouvelle-recrue",
-        "name": "La nouvelle recrue",
-        "album": "equipe",
-        "type": "membre",
-        "rarity": "commune",
-        "subtitle": "Premier jour",
-        "text": "Badge tout neuf, regard curieux : elle a déjà trouvé la machine à café."
-    },
-    {
-        "id": "dev-nocturne",
-        "name": "Le développeur nocturne",
-        "album": "equipe",
-        "type": "membre",
-        "rarity": "rare",
-        "subtitle": "Pôle technique",
-        "text": "Ses meilleurs commits partent après 23 h.",
-        "stats": [
-            {
-                "label": "Café",
-                "value": "4 par jour"
-            },
-            {
-                "label": "Commits",
-                "value": "Beaucoup"
-            }
-        ]
-    },
-    {
-        "id": "cheffe-projet",
-        "name": "La cheffe de projet",
-        "album": "equipe",
-        "type": "membre",
-        "rarity": "ultra",
-        "subtitle": "Pôle projets",
-        "text": "Elle connaît chaque échéance par cœur, et celles d'après aussi."
-    },
-    {
-        "id": "pilier",
-        "name": "Le pilier",
-        "album": "equipe",
-        "type": "membre",
-        "rarity": "legendaire",
-        "subtitle": "Depuis toujours",
-        "text": "Il était là avant le premier serveur, et il sera là après le dernier.",
-        "stats": [
-            {
-                "label": "Ancienneté",
-                "value": "Depuis toujours"
-            }
-        ]
-    },
-    {
         "id": "machine-cafe",
         "name": "La machine à café",
-        "album": "materiel",
-        "type": "materiel",
+        "album": "matos",
+        "type": "matos",
         "rarity": "commune",
         "subtitle": "Cuisine",
         "text": "Carburant officiel de l'équipe. Panne = alerte rouge."
@@ -64,8 +12,8 @@ export default [
     {
         "id": "clavier-meca",
         "name": "Le clavier mécanique",
-        "album": "materiel",
-        "type": "materiel",
+        "album": "matos",
+        "type": "matos",
         "rarity": "commune",
         "subtitle": "Poste de travail",
         "text": "On l'entend depuis l'autre bout de l'open space."
@@ -73,8 +21,8 @@ export default [
     {
         "id": "ecran-geant",
         "name": "L'écran géant",
-        "album": "materiel",
-        "type": "materiel",
+        "album": "matos",
+        "type": "matos",
         "rarity": "rare",
         "subtitle": "Salle de réunion",
         "text": "Il affiche les démos… quand le câble HDMI coopère."
@@ -82,8 +30,8 @@ export default [
     {
         "id": "serveur",
         "name": "Le serveur historique",
-        "album": "materiel",
-        "type": "materiel",
+        "album": "matos",
+        "type": "matos",
         "rarity": "ultra",
         "subtitle": "Salle serveur",
         "text": "Personne n'ose le redémarrer.",
@@ -130,5 +78,145 @@ export default [
         "rarity": "legendaire",
         "subtitle": "Jour J",
         "text": "La signature qui a tout lancé."
+    },
+    {
+        "id": "stagiaire",
+        "name": "Le stagiaire",
+        "album": "team",
+        "type": "team",
+        "rarity": "commune",
+        "subtitle": "Premier jour",
+        "text": "Badge tout neuf, regard curieux : elle a déjà trouvé la machine à café."
+    },
+    {
+        "id": "dev-nocturne",
+        "name": "Le développeur nocturne",
+        "album": "team",
+        "type": "team",
+        "rarity": "rare",
+        "subtitle": "Pôle technique",
+        "text": "Ses meilleurs commits partent après 23 h.",
+        "stats": [
+            {
+                "label": "Café",
+                "value": "4 par jour"
+            },
+            {
+                "label": "Commits",
+                "value": "Beaucoup"
+            }
+        ]
+    },
+    {
+        "id": "cheffe-projet",
+        "name": "La cheffe de projet",
+        "album": "team",
+        "type": "team",
+        "rarity": "ultra",
+        "subtitle": "Pôle projets",
+        "text": "Elle connaît chaque échéance par cœur, et celles d'après aussi."
+    },
+    {
+        "id": "pilier",
+        "name": "Le pilier",
+        "album": "team",
+        "type": "team",
+        "rarity": "legendaire",
+        "subtitle": "Depuis toujours",
+        "text": "Il était là avant le premier serveur, et il sera là après le dernier.",
+        "stats": [
+            {
+                "label": "Ancienneté",
+                "value": "Depuis toujours"
+            }
+        ]
+    },
+    {
+        "id": "david",
+        "name": "God Davido",
+        "album": "team",
+        "type": "team",
+        "rarity": "legendaire",
+        "subtitle": "Le Christ Cosmique",
+        "text": "le roi et le pape Pierre, président de la république démocratique et cosmique"
+    },
+    {
+        "id": "florent",
+        "name": "Florent",
+        "album": "team",
+        "type": "team",
+        "rarity": "rare"
+    },
+    {
+        "id": "corentin",
+        "name": "Corentin",
+        "album": "team",
+        "type": "team",
+        "rarity": "commune"
+    },
+    {
+        "id": "edwige",
+        "name": "Edwige",
+        "album": "team",
+        "type": "team",
+        "rarity": "rare"
+    },
+    {
+        "id": "michele",
+        "name": "Michèle",
+        "album": "team",
+        "type": "team",
+        "rarity": "rare"
+    },
+    {
+        "id": "laurent",
+        "name": "Laurent",
+        "album": "team",
+        "type": "team",
+        "rarity": "commune"
+    },
+    {
+        "id": "gaspard",
+        "name": "Gaspard",
+        "album": "team",
+        "type": "team",
+        "rarity": "commune"
+    },
+    {
+        "id": "vincent",
+        "name": "Vincent",
+        "album": "team",
+        "type": "team",
+        "rarity": "legendaire"
+    },
+    {
+        "id": "isabelle",
+        "name": "Isabelle",
+        "album": "team",
+        "type": "team",
+        "rarity": "ultra"
+    },
+    {
+        "id": "coralie",
+        "name": "Coralie",
+        "album": "team",
+        "type": "team",
+        "rarity": "ultra"
+    },
+    {
+        "id": "victor",
+        "name": "Victor",
+        "album": "team",
+        "type": "team",
+        "rarity": "rare"
+    },
+    {
+        "id": "chiotte",
+        "name": "Les chiottes",
+        "album": "item",
+        "type": "item",
+        "rarity": "commune",
+        "subtitle": "Au fond du couloir",
+        "text": "Faut bien évacuer le café"
     }
 ];
