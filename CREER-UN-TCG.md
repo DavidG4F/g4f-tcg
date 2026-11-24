@@ -408,7 +408,7 @@ Dans chaque liste, les `id` sont uniques.
 | `trade.server` | `null` (service public), sinon `{ host, port, path, secure }` |
 | `showcase.size` | `6` |
 | `advent` | `null` (pas de calendrier), sinon `{ start: 'AAAA-MM-JJ', end: 'AAAA-MM-JJ', boosters: [nombre par case] }` : une case par jour à partir de `start`, ouvrable une fois, jusqu'à `end` inclus (voir 9.8) |
-| `christmas` | `null`, sinon `{ from: 'AAAA-MM-JJ', to: 'AAAA-MM-JJ' }` : décor de Noël entre ces dates incluses : neige et cristaux qui tombent (surtout derrière le contenu), guirlande en festons sous la bannière, congères en bas de l'écran et sur ses bords, flocons autour du slogan. Sans neige ni scintillement avec `prefers-reduced-motion`. |
+| `christmas` | `null`, sinon `{ from: 'AAAA-MM-JJ', to: 'AAAA-MM-JJ' }` : décor de Noël entre ces dates incluses : neige et cristaux qui tombent (surtout derrière le contenu), guirlande en festons sous la bannière, petits tas de neige espacés en bas de l'écran, flocons autour du slogan. Sans neige ni scintillement avec `prefers-reduced-motion`. |
 | `texts` | `{}` : n'importe quelle clé de `strings.js` |
 
 ---
@@ -1737,7 +1737,7 @@ export function drawBooster(pool, { size, guaranteed, mixTypes }, random = Math.
 
 ~~~~js
 // Décor de Noël, entre deux dates du thème : neige qui tombe, guirlande en festons sous la bannière,
-// congères en bas de l'écran et sur ses bords. Purement décoratif : rien n'est cliquable, rien n'est lu par les lecteurs d'écran.
+// petits tas de neige en bas de l'écran. Purement décoratif : rien n'est cliquable, rien n'est lu par les lecteurs d'écran.
 import { el, reducedMotion } from './card.js';
 
 const BULB_COLORS = ['var(--accent-strong)', 'var(--coin)', 'var(--success)', '#f8fafc'];
@@ -1754,18 +1754,6 @@ const noise = (n) => {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return x - Math.floor(x);
 };
-
-/** Chemin lissé passant près des points [[x, y]] : courbes entre les milieux des segments. */
-function smooth(points) {
-    let d = `M${points[0][0]} ${points[0][1]}`;
-    for (let i = 1; i < points.length - 1; i++) {
-        const [x, y] = points[i];
-        const [nx, ny] = points[i + 1];
-        d += ` Q${x} ${y} ${(x + nx) / 2} ${(y + ny) / 2}`;
-    }
-    const [lx, ly] = points.at(-1);
-    return `${d} L${lx} ${ly}`;
-}
 
 // --- Guirlande ---
 
@@ -1830,40 +1818,37 @@ function snowLayer(className, count, { crystals, maxOpacity }) {
 
 // --- Congères ---
 
-/** Neige accumulée en bas : deux couches de bosses, plus hautes dans les coins. Dessinée sur 1200 × 100, étirée à la largeur. */
-function bottomBank() {
-    // Une bosse sur deux est haute : de vrais monticules plutôt qu'une ligne ondulée.
-    const layer = (seed, base, corner, bumps, height) => {
-        const points = [[0, 100]];
-        for (let i = 0; i <= bumps; i++) {
-            const x = (i / bumps) * 1200;
-            const edge = Math.max(0, 1 - Math.min(x, 1200 - x) / 300) ** 2; // 1 dans les coins, 0 au-delà de 300
-            const bump = (i % 2 ? 0.35 : 1) * (0.5 + noise(seed + i) * 0.5) * height;
-            points.push([x, Math.max(2, 100 - base - corner * edge - bump)]);
-        }
-        points.push([1200, 100]);
-        return `${smooth(points)} Z`;
-    };
-    return `<svg class="snowbank__bottom" viewBox="0 0 1200 100" preserveAspectRatio="none">
-        <defs><linearGradient id="snowbank-front" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.55" stop-color="#f1f5fa"/><stop offset="1" stop-color="#d6e0eb"/></linearGradient></defs>
-        <path class="snowbank__back" d="${layer(7, 26, 58, 18, 34)}"/>
-        <path fill="url(#snowbank-front)" d="${layer(31, 14, 52, 14, 30)}"/>
+/** Un petit tas de neige : un dôme arrondi et une épaule plus basse, dessiné sur 100 × 40 puis mis à sa taille. */
+function snowPile(seed) {
+    const shoulder = 16 + noise(seed + 1) * 10; // hauteur de l'épaule gauche (y : 0 en haut, 40 au sol)
+    const top = 2 + noise(seed + 2) * 7; // sommet du dôme
+    const right = 14 + noise(seed + 3) * 12; // petite bosse à droite
+    const d = `M0 40 C3 40 5 ${shoulder + 9} 15 ${shoulder}`
+        + ` C22 ${top + 8} 38 ${top} 52 ${top + 1}`
+        + ` C64 ${top + 2} 70 ${right - 5} 80 ${right}`
+        + ` C90 ${right + 4} 96 39 100 40 Z`;
+    const flip = noise(seed + 4) < 0.5 ? ' transform="translate(100 0) scale(-1 1)"' : ''; // l'épaule à gauche ou à droite
+    return `<svg viewBox="0 0 100 40" preserveAspectRatio="none">
+        <defs><linearGradient id="snowpile-${seed}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.6" stop-color="#eef3f8"/><stop offset="1" stop-color="#cfd9e5"/></linearGradient></defs>
+        <path fill="url(#snowpile-${seed})" d="${d}"${flip}/>
     </svg>`;
 }
 
-/** Neige collée sur un bord de la fenêtre : fine en haut, de plus en plus épaisse vers le bas. Dessinée sur 40 × 1000. */
-function sideDrift(seed) {
-    const points = [[0, 0]];
-    for (let i = 0; i <= 24; i++) {
-        const y = (i / 24) * 1000;
-        const depth = 2 + 30 * (y / 1000) ** 2.4 + noise(seed + i) * 5;
-        points.push([depth, y]);
+/** Petits tas de neige espacés le long du bas de l'écran, de tailles variées. Leur position est en % : ils suivent la largeur. */
+function snowPiles() {
+    const isSmall = window.innerWidth < 600;
+    const count = isSmall ? 4 : Math.round(Math.min(9, window.innerWidth / 190));
+    const piles = [];
+    for (let i = 0; i < count; i++) {
+        const width = (isSmall ? 40 : 50) + noise(i * 3 + 1) * (isSmall ? 36 : 85);
+        const pile = el('span', 'snowpile', { innerHTML: snowPile(i * 7 + 2) });
+        // Réparti sur la largeur, un peu décalé au hasard pour ne pas faire une rangée régulière, sans se toucher
+        const left = ((i + 0.5) / count) * 100 + (noise(i * 5 + 3) - 0.5) * (25 / count);
+        const half = Math.round(width / 2); // le tas reste entier dans l'écran
+        pile.style.cssText = `left:clamp(${half}px, ${left.toFixed(1)}%, calc(100% - ${half}px));width:${Math.round(width)}px;height:${Math.round(width * (0.26 + noise(i * 11) * 0.14))}px`;
+        piles.push(pile);
     }
-    points.push([0, 1000]);
-    return `<svg viewBox="0 0 40 1000" preserveAspectRatio="none">
-        <defs><linearGradient id="snowdrift-${seed}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dde6f0"/></linearGradient></defs>
-        <path fill="url(#snowdrift-${seed})" d="${smooth(points)} Z"/>
-    </svg>`;
+    return piles;
 }
 
 /** Ajoute le décor. banner : la bannière du haut, qui porte la guirlande. */
@@ -1880,14 +1865,10 @@ export function addChristmas(banner) {
         drawGarland(lights);
     }).observe(lights);
 
-    // Congères : en bas, et sur les bords gauche et droit.
+    // Petits tas de neige posés en bas de l'écran.
     const bank = decor('snowbank');
-    bank.innerHTML = bottomBank();
-    const left = decor('snowdrift snowdrift--left');
-    left.innerHTML = sideDrift(3);
-    const right = decor('snowdrift snowdrift--right');
-    right.innerHTML = sideDrift(19);
-    document.body.append(left, right, bank);
+    bank.append(...snowPiles());
+    document.body.append(bank);
 
     if (reducedMotion()) return; // pas de neige qui bouge
     // Beaucoup de flocons derrière le contenu, quelques-uns devant pour la profondeur.
@@ -4107,14 +4088,10 @@ button.label-chip:focus-visible { outline: 2px solid var(--accent); outline-offs
 .lights__bulb { position: absolute; width: 0.4375rem; height: 0.6875rem; margin-top: 0.1875rem; border-radius: 50% 50% 45% 45% / 40% 40% 60% 60%; background: var(--bulb); box-shadow: 0 0 0.625rem var(--bulb); transform-origin: 50% -0.1875rem; translate: -50% 0; animation: lights-twinkle 2.2s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.37s); }
 .lights__bulb::before { content: ""; position: absolute; top: -0.1875rem; left: 50%; width: 0.25rem; height: 0.1875rem; border-radius: 1px; background: #4b5563; translate: -50% 0; }
 
-/* Congères : en bas de l'écran, et collées aux bords gauche et droit. Sous le solde et la bannière. */
-.snowbank { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: clamp(3.5rem, 8vw, 6.5rem); pointer-events: none; filter: drop-shadow(0 -0.25rem 0.75rem rgba(255, 255, 255, 0.18)); }
-.snowbank svg { display: block; width: 100%; height: 100%; }
-.snowbank__back { fill: #d3dde8; }
-.snowdrift { position: fixed; top: 0; bottom: 0; z-index: 30; width: clamp(0.75rem, 2.6vw, 2.5rem); pointer-events: none; filter: drop-shadow(0 0 0.375rem rgba(255, 255, 255, 0.15)); }
-.snowdrift svg { display: block; width: 100%; height: 100%; }
-.snowdrift--left { left: 0; }
-.snowdrift--right { right: 0; transform: scaleX(-1); }
+/* Petits tas de neige posés en bas de l'écran, sous le solde et la bannière (positions et tailles : festive.js) */
+.snowbank { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: 0; overflow: visible; pointer-events: none; }
+.snowpile { position: absolute; bottom: 0; translate: -50% 0; filter: drop-shadow(0 -0.125rem 0.5rem rgba(255, 255, 255, 0.2)); }
+.snowpile svg { display: block; width: 100%; height: 100%; }
 
 /* Une lueur froide derrière le titre, deux flocons autour du slogan */
 .is-christmas .page__hero { background: radial-gradient(ellipse 60% 70% at 50% 40%, rgba(255, 255, 255, 0.06), transparent 70%); }

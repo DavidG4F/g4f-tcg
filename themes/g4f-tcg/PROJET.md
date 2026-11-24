@@ -27,7 +27,7 @@
 - Boosters par case : la liste `advent.boosters` de `theme.js`, dans l'ordre des jours (première valeur = 1er décembre).
 - Ne pas changer `advent.start` une fois le calendrier commencé : les cases déjà ouvertes seraient oubliées et pourraient être rouvertes.
 - Pour l'essayer à une autre date, en local seulement : `http://localhost:3000/?date=2026-12-10`.
-- Décor de Noël (neige, guirlande en festons, congères en bas et sur les bords) du 24 novembre 2026 au 6 janvier 2027 : `christmas` dans `theme.js`.
+- Décor de Noël (neige, guirlande en festons, petits tas de neige en bas de l'écran) du 24 novembre 2026 au 6 janvier 2027 : `christmas` dans `theme.js`.
 
 ## Ajouter ou modifier des cartes
 

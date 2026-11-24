@@ -1,5 +1,5 @@
 // Décor de Noël, entre deux dates du thème : neige qui tombe, guirlande en festons sous la bannière,
-// congères en bas de l'écran et sur ses bords. Purement décoratif : rien n'est cliquable, rien n'est lu par les lecteurs d'écran.
+// petits tas de neige en bas de l'écran. Purement décoratif : rien n'est cliquable, rien n'est lu par les lecteurs d'écran.
 import { el, reducedMotion } from './card.js';
 
 const BULB_COLORS = ['var(--accent-strong)', 'var(--coin)', 'var(--success)', '#f8fafc'];
@@ -16,18 +16,6 @@ const noise = (n) => {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return x - Math.floor(x);
 };
-
-/** Chemin lissé passant près des points [[x, y]] : courbes entre les milieux des segments. */
-function smooth(points) {
-    let d = `M${points[0][0]} ${points[0][1]}`;
-    for (let i = 1; i < points.length - 1; i++) {
-        const [x, y] = points[i];
-        const [nx, ny] = points[i + 1];
-        d += ` Q${x} ${y} ${(x + nx) / 2} ${(y + ny) / 2}`;
-    }
-    const [lx, ly] = points.at(-1);
-    return `${d} L${lx} ${ly}`;
-}
 
 // --- Guirlande ---
 
@@ -92,40 +80,37 @@ function snowLayer(className, count, { crystals, maxOpacity }) {
 
 // --- Congères ---
 
-/** Neige accumulée en bas : deux couches de bosses, plus hautes dans les coins. Dessinée sur 1200 × 100, étirée à la largeur. */
-function bottomBank() {
-    // Une bosse sur deux est haute : de vrais monticules plutôt qu'une ligne ondulée.
-    const layer = (seed, base, corner, bumps, height) => {
-        const points = [[0, 100]];
-        for (let i = 0; i <= bumps; i++) {
-            const x = (i / bumps) * 1200;
-            const edge = Math.max(0, 1 - Math.min(x, 1200 - x) / 300) ** 2; // 1 dans les coins, 0 au-delà de 300
-            const bump = (i % 2 ? 0.35 : 1) * (0.5 + noise(seed + i) * 0.5) * height;
-            points.push([x, Math.max(2, 100 - base - corner * edge - bump)]);
-        }
-        points.push([1200, 100]);
-        return `${smooth(points)} Z`;
-    };
-    return `<svg class="snowbank__bottom" viewBox="0 0 1200 100" preserveAspectRatio="none">
-        <defs><linearGradient id="snowbank-front" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.55" stop-color="#f1f5fa"/><stop offset="1" stop-color="#d6e0eb"/></linearGradient></defs>
-        <path class="snowbank__back" d="${layer(7, 26, 58, 18, 34)}"/>
-        <path fill="url(#snowbank-front)" d="${layer(31, 14, 52, 14, 30)}"/>
+/** Un petit tas de neige : un dôme arrondi et une épaule plus basse, dessiné sur 100 × 40 puis mis à sa taille. */
+function snowPile(seed) {
+    const shoulder = 16 + noise(seed + 1) * 10; // hauteur de l'épaule gauche (y : 0 en haut, 40 au sol)
+    const top = 2 + noise(seed + 2) * 7; // sommet du dôme
+    const right = 14 + noise(seed + 3) * 12; // petite bosse à droite
+    const d = `M0 40 C3 40 5 ${shoulder + 9} 15 ${shoulder}`
+        + ` C22 ${top + 8} 38 ${top} 52 ${top + 1}`
+        + ` C64 ${top + 2} 70 ${right - 5} 80 ${right}`
+        + ` C90 ${right + 4} 96 39 100 40 Z`;
+    const flip = noise(seed + 4) < 0.5 ? ' transform="translate(100 0) scale(-1 1)"' : ''; // l'épaule à gauche ou à droite
+    return `<svg viewBox="0 0 100 40" preserveAspectRatio="none">
+        <defs><linearGradient id="snowpile-${seed}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.6" stop-color="#eef3f8"/><stop offset="1" stop-color="#cfd9e5"/></linearGradient></defs>
+        <path fill="url(#snowpile-${seed})" d="${d}"${flip}/>
     </svg>`;
 }
 
-/** Neige collée sur un bord de la fenêtre : fine en haut, de plus en plus épaisse vers le bas. Dessinée sur 40 × 1000. */
-function sideDrift(seed) {
-    const points = [[0, 0]];
-    for (let i = 0; i <= 24; i++) {
-        const y = (i / 24) * 1000;
-        const depth = 2 + 30 * (y / 1000) ** 2.4 + noise(seed + i) * 5;
-        points.push([depth, y]);
+/** Petits tas de neige espacés le long du bas de l'écran, de tailles variées. Leur position est en % : ils suivent la largeur. */
+function snowPiles() {
+    const isSmall = window.innerWidth < 600;
+    const count = isSmall ? 4 : Math.round(Math.min(9, window.innerWidth / 190));
+    const piles = [];
+    for (let i = 0; i < count; i++) {
+        const width = (isSmall ? 40 : 50) + noise(i * 3 + 1) * (isSmall ? 36 : 85);
+        const pile = el('span', 'snowpile', { innerHTML: snowPile(i * 7 + 2) });
+        // Réparti sur la largeur, un peu décalé au hasard pour ne pas faire une rangée régulière, sans se toucher
+        const left = ((i + 0.5) / count) * 100 + (noise(i * 5 + 3) - 0.5) * (25 / count);
+        const half = Math.round(width / 2); // le tas reste entier dans l'écran
+        pile.style.cssText = `left:clamp(${half}px, ${left.toFixed(1)}%, calc(100% - ${half}px));width:${Math.round(width)}px;height:${Math.round(width * (0.26 + noise(i * 11) * 0.14))}px`;
+        piles.push(pile);
     }
-    points.push([0, 1000]);
-    return `<svg viewBox="0 0 40 1000" preserveAspectRatio="none">
-        <defs><linearGradient id="snowdrift-${seed}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dde6f0"/></linearGradient></defs>
-        <path fill="url(#snowdrift-${seed})" d="${smooth(points)} Z"/>
-    </svg>`;
+    return piles;
 }
 
 /** Ajoute le décor. banner : la bannière du haut, qui porte la guirlande. */
@@ -142,14 +127,10 @@ export function addChristmas(banner) {
         drawGarland(lights);
     }).observe(lights);
 
-    // Congères : en bas, et sur les bords gauche et droit.
+    // Petits tas de neige posés en bas de l'écran.
     const bank = decor('snowbank');
-    bank.innerHTML = bottomBank();
-    const left = decor('snowdrift snowdrift--left');
-    left.innerHTML = sideDrift(3);
-    const right = decor('snowdrift snowdrift--right');
-    right.innerHTML = sideDrift(19);
-    document.body.append(left, right, bank);
+    bank.append(...snowPiles());
+    document.body.append(bank);
 
     if (reducedMotion()) return; // pas de neige qui bouge
     // Beaucoup de flocons derrière le contenu, quelques-uns devant pour la profondeur.

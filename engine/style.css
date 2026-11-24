@@ -629,14 +629,10 @@ button.label-chip:focus-visible { outline: 2px solid var(--accent); outline-offs
 .lights__bulb { position: absolute; width: 0.4375rem; height: 0.6875rem; margin-top: 0.1875rem; border-radius: 50% 50% 45% 45% / 40% 40% 60% 60%; background: var(--bulb); box-shadow: 0 0 0.625rem var(--bulb); transform-origin: 50% -0.1875rem; translate: -50% 0; animation: lights-twinkle 2.2s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.37s); }
 .lights__bulb::before { content: ""; position: absolute; top: -0.1875rem; left: 50%; width: 0.25rem; height: 0.1875rem; border-radius: 1px; background: #4b5563; translate: -50% 0; }
 
-/* Congères : en bas de l'écran, et collées aux bords gauche et droit. Sous le solde et la bannière. */
-.snowbank { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: clamp(3.5rem, 8vw, 6.5rem); pointer-events: none; filter: drop-shadow(0 -0.25rem 0.75rem rgba(255, 255, 255, 0.18)); }
-.snowbank svg { display: block; width: 100%; height: 100%; }
-.snowbank__back { fill: #d3dde8; }
-.snowdrift { position: fixed; top: 0; bottom: 0; z-index: 30; width: clamp(0.75rem, 2.6vw, 2.5rem); pointer-events: none; filter: drop-shadow(0 0 0.375rem rgba(255, 255, 255, 0.15)); }
-.snowdrift svg { display: block; width: 100%; height: 100%; }
-.snowdrift--left { left: 0; }
-.snowdrift--right { right: 0; transform: scaleX(-1); }
+/* Petits tas de neige posés en bas de l'écran, sous le solde et la bannière (positions et tailles : festive.js) */
+.snowbank { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: 0; overflow: visible; pointer-events: none; }
+.snowpile { position: absolute; bottom: 0; translate: -50% 0; filter: drop-shadow(0 -0.125rem 0.5rem rgba(255, 255, 255, 0.2)); }
+.snowpile svg { display: block; width: 100%; height: 100%; }
 
 /* Une lueur froide derrière le titre, deux flocons autour du slogan */
 .is-christmas .page__hero { background: radial-gradient(ellipse 60% 70% at 50% 40%, rgba(255, 255, 255, 0.06), transparent 70%); }
