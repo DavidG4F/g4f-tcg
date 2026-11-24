@@ -123,6 +123,7 @@ export const STRINGS = {
     showcase_missing: 'Il vous manque',
     showcase_close: 'Voir ma collection',
     advent_open: 'Calendrier de l\'Avent',
+    advent_short: 'Calendrier',
     advent_title: 'Calendrier de l\'Avent',
     advent_intro: 'Chaque jour, une nouvelle case s\'ouvre, avec des boosters à l\'intérieur.',
     advent_until: 'Une case oubliée ? Elle vous attend jusqu\'au',

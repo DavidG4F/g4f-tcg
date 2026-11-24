@@ -21,6 +21,12 @@ export function startOfDay(time) {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+/** Vrai si le jour de now est entre from et to inclus ('AAAA-MM-JJ'). */
+export function isBetween(from, to, now) {
+    const today = startOfDay(now).getTime();
+    return today >= parseDay(from).getTime() && today <= parseDay(to).getTime();
+}
+
 /** Avant, pendant ou après le calendrier : 'none' (pas de calendrier), 'soon', 'open' ou 'over'. */
 export function adventStatus(advent, now) {
     if (!advent) return 'none';

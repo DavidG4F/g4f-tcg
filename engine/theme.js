@@ -87,6 +87,12 @@ export function checkTheme(theme) {
             need(parseDay(advent.end) >= last, 'advent.end : doit être le jour de la dernière case ou après');
         }
     }
+
+    // Décor de Noël, facultatif : { from: 'AAAA-MM-JJ', to: 'AAAA-MM-JJ' }
+    const { christmas } = theme;
+    if (christmas !== undefined && christmas !== null) {
+        need(isDay(christmas.from) && isDay(christmas.to) && parseDay(christmas.from) <= parseDay(christmas.to), 'christmas : { from, to } en dates AAAA-MM-JJ attendu, from avant to');
+    }
     return errors;
 }
 
@@ -116,6 +122,7 @@ export async function loadTheme(name) {
         pack: {},
         motif: 'star',
         advent: null,
+        christmas: null,
         ...theme,
         logo: asset(theme.logo),
         rarities,

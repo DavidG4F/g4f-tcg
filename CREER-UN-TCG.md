@@ -292,6 +292,7 @@ tcg/
 │   ├── booster.js           fenêtre d'ouverture : paquet, cartes, résultat
 │   ├── calendar.js          calendrier de l'Avent : dates et cases, sans affichage
 │   ├── advent.js            fenêtre du calendrier de l'Avent
+│   ├── festive.js           décor de Noël : neige et guirlande
 │   ├── detail.js            détail d'une carte
 │   ├── labels.js            cœur favori et étiquettes
 │   ├── showcase.js          vitrine : composition, lien, lecture
@@ -407,6 +408,7 @@ Dans chaque liste, les `id` sont uniques.
 | `trade.server` | `null` (service public), sinon `{ host, port, path, secure }` |
 | `showcase.size` | `6` |
 | `advent` | `null` (pas de calendrier), sinon `{ start: 'AAAA-MM-JJ', end: 'AAAA-MM-JJ', boosters: [nombre par case] }` : une case par jour à partir de `start`, ouvrable une fois, jusqu'à `end` inclus (voir 9.8) |
+| `christmas` | `null`, sinon `{ from: 'AAAA-MM-JJ', to: 'AAAA-MM-JJ' }` : décor de Noël (neige derrière le contenu, guirlande sous la bannière, flocons autour du slogan) entre ces dates incluses. Sans neige ni scintillement avec `prefers-reduced-motion`. |
 | `texts` | `{}` : n'importe quelle clé de `strings.js` |
 
 ---
@@ -682,9 +684,10 @@ Le `#…` est retiré de l'adresse une fois lu. Une seule fenêtre à la fois.
 
 ### 10.1 Page
 
-De haut en bas : en-tête (logo ou motif, nom, liens), grand titre et slogan, **barre de collection**, **albums**, **filtres**, un tableau par album, pied de page. En bas à gauche, toujours visibles : solde et bouton de booster.
+De haut en bas : **bannière**, grand titre et slogan, **barre de collection**, **albums**, **filtres**, un tableau par album, pied de page. En bas à gauche, toujours visibles : solde, bouton de booster et, quand une case attend, rappel du calendrier.
 
-- **Barre de collection** : « Collection n / total », progression, nombre par rareté ; boutons Ouvrir un booster, Échanger, Ma vitrine, Vendre mes doubles (avec le montant, caché à zéro), Révéler (si permis), Recommencer (avec confirmation, caché si vide).
+- **Bannière** : collée en haut de l'écran. Logo ou motif, nom, liens du thème, puis Calendrier de l'Avent (avec le nombre de cases à ouvrir, caché hors calendrier), Échanger, Ma vitrine. Sous 768 px, les boutons passent sur leur propre ligne, avec le libellé court « Calendrier ».
+- **Barre de collection** : « Collection n / total », progression, nombre par rareté ; boutons Ouvrir un booster, Vendre mes doubles (avec le montant, caché à zéro), Révéler (si permis), Recommencer (avec confirmation, caché si vide).
 - **Albums** : « Tous les albums » puis un bouton par album, avec n / total et progression. Complet : vert, avec ✓. Un clic filtre.
 - **Filtres** : Toutes, ♥ Favoris, étiquettes du thème, étiquettes du joueur (pastille de couleur). Se combinent avec l'album. Sans résultat : message.
 - **Tableaux** : cases 5:7, de 232 px au moins (deux par ligne sur mobile) ; cartes découvertes d'abord.
@@ -789,8 +792,9 @@ Le dossier se publie tel quel sur n'importe quel hébergeur statique en **HTTPS*
 
 | Fonction | Modifications |
 |---|---|
-| Échanges | `main.js` : retirer `tradeButton` de `bar.append(…)`, et la branche `room` de `openLink` ; `detail.js` : retirer le bloc `if (player.canTrade(card))` |
-| Vitrine | `main.js` : retirer `showcaseButton` et la branche `vitrine` ; `detail.js` : retirer le bouton `showcase` |
+| Échanges | `main.js` : retirer `tradeButton` de `menu.append(…)`, et la branche `room` de `openLink` ; `detail.js` : retirer le bloc `if (player.canTrade(card))` |
+| Vitrine | `main.js` : retirer `showcaseButton` de `menu.append(…)` et la branche `vitrine` ; `detail.js` : retirer le bouton `showcase` |
+| Calendrier de l'Avent | `theme.js` du thème : `advent: null` ; rien à changer dans le moteur |
 | Étiquettes | `detail.js` : retirer `labelEditor(…)` ; `main.js` : retirer `player.labels` de `views()` |
 | Favoris | `detail.js` et `main.js` : retirer `favoriteButton(…)` et `card.favorite` ; `main.js` : retirer la vue `favorites` |
 | Revente | `main.js` : retirer `sellButton` ; `booster.js` : retirer `sell_booster` ; `detail.js` : retirer `sell(…)`. Prévoir une autre source de pièces, ou des boosters gratuits seulement. |
@@ -1350,6 +1354,12 @@ export function startOfDay(time) {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+/** Vrai si le jour de now est entre from et to inclus ('AAAA-MM-JJ'). */
+export function isBetween(from, to, now) {
+    const today = startOfDay(now).getTime();
+    return today >= parseDay(from).getTime() && today <= parseDay(to).getTime();
+}
+
 /** Avant, pendant ou après le calendrier : 'none' (pas de calendrier), 'soon', 'open' ou 'over'. */
 export function adventStatus(advent, now) {
     if (!advent) return 'none';
@@ -1723,6 +1733,50 @@ export function drawBooster(pool, { size, guaranteed, mixTypes }, random = Math.
 }
 ~~~~
 
+### `engine/festive.js`
+
+~~~~js
+// Décor de Noël, entre deux dates du thème : neige en arrière-plan et guirlande lumineuse sous la bannière.
+// Purement décoratif : rien n'est cliquable, rien n'est lu par les lecteurs d'écran.
+import { el, reducedMotion } from './card.js';
+
+const FLAKES = 42;
+const BULBS = 80; // assez pour les écrans larges ; le surplus est coupé
+
+/** Ajoute le décor. banner : la bannière du haut, qui porte la guirlande. */
+export function addChristmas(banner) {
+    document.documentElement.classList.add('is-christmas');
+
+    const lights = el('div', 'lights');
+    lights.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < BULBS; i++) {
+        const bulb = el('span', 'lights__bulb');
+        bulb.style.setProperty('--i', i);
+        lights.append(bulb);
+    }
+    banner.append(lights);
+
+    if (reducedMotion()) return; // pas de neige qui bouge
+    const snow = el('div', 'snow');
+    snow.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < FLAKES; i++) {
+        const flake = el('span', 'snow__flake');
+        const size = 2 + Math.random() * 4;
+        flake.style.cssText = [
+            `left:${Math.random() * 100}%`,
+            `width:${size}px`,
+            `height:${size}px`,
+            `opacity:${0.25 + Math.random() * 0.5}`,
+            `--drift:${Math.round(Math.random() * 80 - 40)}px`,
+            `animation-duration:${12 + Math.random() * 14}s`,
+            `animation-delay:${-Math.random() * 26}s`, // déjà en train de tomber à l'arrivée
+        ].join(';');
+        snow.append(flake);
+    }
+    document.body.prepend(snow);
+}
+~~~~
+
 ### `engine/labels.js`
 
 ~~~~js
@@ -1844,7 +1898,8 @@ export function labelDots(player, card) {
 // Point d'entrée : charge le thème, construit la page et relie les cartes, les boosters et les échanges.
 import { createAdvent } from './advent.js';
 import { createBooster } from './booster.js';
-import { isDay, parseDay, startOfDay } from './calendar.js';
+import { isBetween, isDay, parseDay, startOfDay } from './calendar.js';
+import { addChristmas } from './festive.js';
 import { actionButton, coins, createCard, el, text } from './card.js';
 import { createDetail } from './detail.js';
 import { drawBooster } from './draw.js';
@@ -1906,17 +1961,21 @@ function buildPage(theme) {
         const count = el('span', 'page__count');
         return { album, grid, count, node: el('section', 'page__section', { id: `album-${album.id}` }, el('h2', 'page__heading', {}, album.label, count), grid) };
     });
-    const page = el('div', 'page', {},
-        el('header', 'page__header', {},
+    // Bannière du haut, toujours visible : nom du jeu, liens du thème, puis calendrier, échanges et vitrine.
+    const menu = el('div', 'banner__actions');
+    const banner = el('header', 'banner', {},
+        el('div', 'banner__inner', {},
             el('div', 'page__brand', {}, theme.logo ? el('img', '', { src: theme.logo, alt: '' }) : motif(), el('span', '', { textContent: theme.name })),
-            el('nav', 'page__nav', {}, ...theme.nav.map(({ label, url }) => el('a', '', { href: url, textContent: label })))),
+            el('nav', 'page__nav', {}, ...theme.nav.map(({ label, url }) => el('a', '', { href: url, textContent: label }))),
+            menu));
+    const page = el('div', 'page', {},
         el('section', 'page__hero', {},
             el('h1', 'page__title', { textContent: theme.title ?? theme.name }),
             ...(theme.tagline ? [el('p', 'page__tagline', { textContent: theme.tagline })] : [])),
         el('main', '', {}, bar, albumBar, filters, empty, ...sections.map(({ node }) => node)),
         ...(theme.footer ? [el('footer', 'page__footer', { textContent: theme.footer })] : []));
-    document.body.append(page);
-    return { bar, albumBar, filters, empty, sections };
+    document.body.append(banner, page);
+    return { banner, menu, bar, albumBar, filters, empty, sections };
 }
 
 function start(theme) {
@@ -1931,9 +1990,11 @@ function start(theme) {
     setIcon();
 
     const { rarities } = theme;
-    const { bar, albumBar, filters, empty, sections } = buildPage(theme);
+    const { banner, menu, bar, albumBar, filters, empty, sections } = buildPage(theme);
+    const now = gameClock();
+    if (theme.christmas && isBetween(theme.christmas.from, theme.christmas.to, now())) addChristmas(banner);
     const cards = theme.cards.map((card) => ({ ...card, node: el('div', 'tile'), isShown: null }));
-    const player = new Player(cards, { gameId: theme.id, economy: theme.economy, trade: theme.trade, showcase: theme.showcase, advent: theme.advent }, gameClock());
+    const player = new Player(cards, { gameId: theme.id, economy: theme.economy, trade: theme.trade, showcase: theme.showcase, advent: theme.advent }, now);
     const newCards = new Set(); // découvertes pendant cette visite
 
     // --- Grilles : seules les cartes possédées sont visibles ---
@@ -2069,10 +2130,13 @@ function start(theme) {
     });
     const sellValue = el('span');
     sellButton.append(' ', sellValue);
-    const showcaseButton = actionButton('showcase_mine', 'booster__btn', () => showcase.open());
-    const tradeButton = actionButton('trade_open', 'booster__btn', () => trade.open());
+    const showcaseButton = actionButton('showcase_mine', 'banner__btn', () => showcase.open());
+    const tradeButton = actionButton('trade_open', 'banner__btn', () => trade.open());
     const adventBadge = el('span', 'advent-btn__badge');
-    const adventButton = actionButton('advent_open', 'booster__btn', () => advent.open(), adventBadge);
+    // Libellé court sur petit écran.
+    const adventButton = actionButton('advent_open', 'banner__btn banner__btn--advent', () => advent.open(), text('span', 'banner__short', 'advent_short'), adventBadge);
+    adventButton.firstChild.classList.add('banner__long');
+    menu.append(adventButton, tradeButton, showcaseButton);
     const revealLink = actionButton('cards_reveal_all', 'booster__link', revealAll);
     const resetLink = actionButton('cards_reset', 'booster__link', () => {
         if (!window.confirm(t('cards_reset_confirm'))) return;
@@ -2094,7 +2158,7 @@ function start(theme) {
     document.body.append(el('div', 'hud', {}, balance, hudButton, hudAdvent));
 
     const label = el('p', 'collection__label', {}, text('span', '', 'cards_collection'), ' ', count);
-    bar.append(el('div', 'collection__main', {}, label, progress, chips), el('div', 'collection__actions', {}, openButton, adventButton, tradeButton, showcaseButton, sellButton, revealLink, resetLink));
+    bar.append(el('div', 'collection__main', {}, label, progress, chips), el('div', 'collection__actions', {}, openButton, sellButton, revealLink, resetLink));
 
     function update() {
         cards.forEach(showCard);
@@ -3260,6 +3324,7 @@ export const STRINGS = {
     showcase_missing: 'Il vous manque',
     showcase_close: 'Voir ma collection',
     advent_open: 'Calendrier de l\'Avent',
+    advent_short: 'Calendrier',
     advent_title: 'Calendrier de l\'Avent',
     advent_intro: 'Chaque jour, une nouvelle case s\'ouvre, avec des boosters à l\'intérieur.',
     advent_until: 'Une case oubliée ? Elle vous attend jusqu\'au',
@@ -3332,7 +3397,17 @@ a { color: inherit; }
 /* ---------- Page ---------- */
 
 .page { max-width: 76rem; margin: 0 auto; padding: 0 1.5rem 7rem; }
-.page__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1.5rem; padding: 1.25rem 0; }
+/* Bannière du haut : reste visible au défilement */
+.banner { position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--background) 82%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.banner__inner { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; max-width: 76rem; margin: 0 auto; padding: 0.875rem 1.5rem; }
+.banner__inner .page__nav { margin-right: auto; }
+.banner__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.banner__btn { display: inline-flex; align-items: center; padding: 0.5rem 1rem; border: 1px solid var(--border); border-radius: 999px; background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--text-soft); font-size: 0.9375rem; font-weight: 500; white-space: nowrap; transition: color 0.2s, border-color 0.2s, background-color 0.2s; }
+.banner__btn:hover { border-color: var(--accent); color: var(--text); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+.banner__btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.banner__btn--advent { border-color: color-mix(in srgb, var(--coin) 55%, transparent); color: var(--coin); }
+.banner__btn--advent:hover { border-color: var(--coin); color: var(--coin); background: color-mix(in srgb, var(--coin) 12%, var(--surface)); }
+.banner__short { display: none; }
 .page__brand { display: flex; align-items: center; gap: 0.75rem; font: 700 1.25rem var(--font-heading); }
 .page__brand .motif { width: 2.25rem; height: 2.25rem; }
 .page__brand img { width: 2.25rem; height: 2.25rem; object-fit: contain; }
@@ -3342,7 +3417,7 @@ a { color: inherit; }
 .page__hero { padding: clamp(2rem, 7vw, 5rem) 0 clamp(2rem, 5vw, 3.5rem); text-align: center; }
 .page__title { font-size: clamp(2.25rem, 7vw, 4rem); font-weight: 700; line-height: 1.1; text-wrap: balance; }
 .page__tagline { max-width: 40rem; margin: 1rem auto 0; color: var(--text-soft); font-size: 1.125rem; text-wrap: balance; }
-.page__section { margin-top: 3rem; scroll-margin-top: 1rem; }
+.page__section { margin-top: 3rem; scroll-margin-top: 6rem; } /* sous la bannière */
 .page__heading { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 1.5rem; font-size: 1.75rem; font-weight: 700; }
 .page__count { color: var(--muted); font: 500 1rem var(--font-body); font-variant-numeric: tabular-nums; }
 .page__empty { margin-top: 3rem; color: var(--muted); text-align: center; }
@@ -3375,6 +3450,14 @@ a { color: inherit; }
 .album.is-complete .collection__progress::-moz-progress-bar { background: var(--success); }
 @media (max-width: 768px) {
     .page { padding-inline: 1rem; }
+    .banner__inner { padding: 0.625rem 1rem; }
+    /* Les boutons passent sur leur propre ligne, à parts égales */
+    .banner__actions { width: 100%; flex-wrap: nowrap; }
+    .banner__btn { flex: 1 1 0; justify-content: center; min-width: 0; padding: 0.4375rem 0.5rem; font-size: 0.8125rem; }
+    .banner__btn--advent { flex-grow: 1.35; }
+    .banner__btn > span:first-child, .banner__short { overflow: hidden; text-overflow: ellipsis; }
+    .banner__long { display: none; }
+    .banner__short { display: inline; }
     .albums { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .album:first-child { grid-column: 1 / -1; }
     .filters .segmented button { flex: 1 1 auto; }
@@ -3887,9 +3970,28 @@ button.label-chip:focus-visible { outline: 2px solid var(--accent); outline-offs
     .hud__advent { width: 2.625rem; height: 2.625rem; }
 }
 
+/* ---------- Décor de Noël (festive.js), entre les dates christmas du thème ---------- */
+
+/* Neige derrière tout le contenu : elle ne passe que dans les espaces vides */
+.snow { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.snow__flake { position: absolute; top: -1rem; border-radius: 50%; background: #ffffff; box-shadow: 0 0 4px rgba(255, 255, 255, 0.6); animation: snowfall linear infinite; }
+
+/* Guirlande accrochée sous la bannière */
+.lights { position: absolute; top: 100%; left: 0; right: 0; display: flex; gap: 1.75rem; height: 1.5rem; padding-left: 0.875rem; overflow: hidden; pointer-events: none; }
+.lights__bulb { --bulb: var(--accent-strong); position: relative; flex: none; width: 0.4375rem; height: 0.6875rem; margin-top: 0.125rem; border-radius: 50% 50% 45% 45% / 40% 40% 60% 60%; background: var(--bulb); box-shadow: 0 0 0.625rem var(--bulb); animation: lights-twinkle 2.2s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.37s); }
+.lights__bulb::before { content: ""; position: absolute; top: -0.1875rem; left: 50%; width: 0.25rem; height: 0.1875rem; border-radius: 1px; background: var(--border); translate: -50% 0; }
+.lights__bulb:nth-child(odd) { margin-top: 0.3125rem; } /* la guirlande ondule */
+.lights__bulb:nth-child(4n + 2) { --bulb: var(--coin); }
+.lights__bulb:nth-child(4n + 3) { --bulb: var(--success); }
+.lights__bulb:nth-child(4n + 4) { --bulb: #f8fafc; }
+
+/* Une lueur froide derrière le titre, deux flocons autour du slogan */
+.is-christmas .page__hero { background: radial-gradient(ellipse 60% 70% at 50% 40%, rgba(255, 255, 255, 0.06), transparent 70%); }
+.is-christmas .page__tagline::before, .is-christmas .page__tagline::after { content: "❄"; margin: 0 0.625rem; color: var(--accent); }
+
 /* ---------- Barre de collection ---------- */
 
-.collection { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; margin-bottom: 2rem; padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: 0.75rem; background: color-mix(in srgb, var(--surface) 60%, transparent); }
+.collection { scroll-margin-top: 6rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; margin-bottom: 2rem; padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: 0.75rem; background: color-mix(in srgb, var(--surface) 60%, transparent); }
 .collection__main { flex: 1 1 20rem; }
 .collection__label { margin-bottom: 0.5rem; font-size: 1.125rem; }
 .collection__count { font-variant-numeric: tabular-nums; }
@@ -3943,9 +4045,12 @@ button.label-chip:focus-visible { outline: 2px solid var(--accent); outline-offs
 @keyframes flash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
 @keyframes advent-glow { to { box-shadow: 0 0 0 2px var(--coin), 0 0 2.25rem color-mix(in srgb, var(--coin) 75%, transparent); } }
 @keyframes advent-pop { 40% { transform: scale(1.12); } }
+@keyframes snowfall { to { transform: translate(var(--drift), calc(100vh + 2rem)); } }
+@keyframes lights-twinkle { from { opacity: 0.45; box-shadow: 0 0 0.125rem var(--bulb); } to { opacity: 1; box-shadow: 0 0 0.75rem 0.125rem var(--bulb); } }
 
 @media (prefers-reduced-motion: reduce) {
-    .booster, .booster *, .booster::after, .floating-booster, .detail, .detail *, .trade, .trade *, .showcase, .showcase *, .advent, .advent *, .hud__advent { animation: none !important; transition: none !important; }
+    .booster, .booster *, .booster::after, .floating-booster, .detail, .detail *, .trade, .trade *, .showcase, .showcase *, .advent, .advent *, .hud__advent, .lights__bulb { animation: none !important; transition: none !important; }
+    .snow { display: none; }
     .fx { display: none; }
 }
 ~~~~
@@ -4042,6 +4147,12 @@ export function checkTheme(theme) {
             need(parseDay(advent.end) >= last, 'advent.end : doit être le jour de la dernière case ou après');
         }
     }
+
+    // Décor de Noël, facultatif : { from: 'AAAA-MM-JJ', to: 'AAAA-MM-JJ' }
+    const { christmas } = theme;
+    if (christmas !== undefined && christmas !== null) {
+        need(isDay(christmas.from) && isDay(christmas.to) && parseDay(christmas.from) <= parseDay(christmas.to), 'christmas : { from, to } en dates AAAA-MM-JJ attendu, from avant to');
+    }
     return errors;
 }
 
@@ -4071,6 +4182,7 @@ export async function loadTheme(name) {
         pack: {},
         motif: 'star',
         advent: null,
+        christmas: null,
         ...theme,
         logo: asset(theme.logo),
         rarities,

@@ -1,7 +1,8 @@
 // Point d'entrée : charge le thème, construit la page et relie les cartes, les boosters et les échanges.
 import { createAdvent } from './advent.js';
 import { createBooster } from './booster.js';
-import { isDay, parseDay, startOfDay } from './calendar.js';
+import { isBetween, isDay, parseDay, startOfDay } from './calendar.js';
+import { addChristmas } from './festive.js';
 import { actionButton, coins, createCard, el, text } from './card.js';
 import { createDetail } from './detail.js';
 import { drawBooster } from './draw.js';
@@ -63,17 +64,21 @@ function buildPage(theme) {
         const count = el('span', 'page__count');
         return { album, grid, count, node: el('section', 'page__section', { id: `album-${album.id}` }, el('h2', 'page__heading', {}, album.label, count), grid) };
     });
-    const page = el('div', 'page', {},
-        el('header', 'page__header', {},
+    // Bannière du haut, toujours visible : nom du jeu, liens du thème, puis calendrier, échanges et vitrine.
+    const menu = el('div', 'banner__actions');
+    const banner = el('header', 'banner', {},
+        el('div', 'banner__inner', {},
             el('div', 'page__brand', {}, theme.logo ? el('img', '', { src: theme.logo, alt: '' }) : motif(), el('span', '', { textContent: theme.name })),
-            el('nav', 'page__nav', {}, ...theme.nav.map(({ label, url }) => el('a', '', { href: url, textContent: label })))),
+            el('nav', 'page__nav', {}, ...theme.nav.map(({ label, url }) => el('a', '', { href: url, textContent: label }))),
+            menu));
+    const page = el('div', 'page', {},
         el('section', 'page__hero', {},
             el('h1', 'page__title', { textContent: theme.title ?? theme.name }),
             ...(theme.tagline ? [el('p', 'page__tagline', { textContent: theme.tagline })] : [])),
         el('main', '', {}, bar, albumBar, filters, empty, ...sections.map(({ node }) => node)),
         ...(theme.footer ? [el('footer', 'page__footer', { textContent: theme.footer })] : []));
-    document.body.append(page);
-    return { bar, albumBar, filters, empty, sections };
+    document.body.append(banner, page);
+    return { banner, menu, bar, albumBar, filters, empty, sections };
 }
 
 function start(theme) {
@@ -88,9 +93,11 @@ function start(theme) {
     setIcon();
 
     const { rarities } = theme;
-    const { bar, albumBar, filters, empty, sections } = buildPage(theme);
+    const { banner, menu, bar, albumBar, filters, empty, sections } = buildPage(theme);
+    const now = gameClock();
+    if (theme.christmas && isBetween(theme.christmas.from, theme.christmas.to, now())) addChristmas(banner);
     const cards = theme.cards.map((card) => ({ ...card, node: el('div', 'tile'), isShown: null }));
-    const player = new Player(cards, { gameId: theme.id, economy: theme.economy, trade: theme.trade, showcase: theme.showcase, advent: theme.advent }, gameClock());
+    const player = new Player(cards, { gameId: theme.id, economy: theme.economy, trade: theme.trade, showcase: theme.showcase, advent: theme.advent }, now);
     const newCards = new Set(); // découvertes pendant cette visite
 
     // --- Grilles : seules les cartes possédées sont visibles ---
@@ -226,10 +233,13 @@ function start(theme) {
     });
     const sellValue = el('span');
     sellButton.append(' ', sellValue);
-    const showcaseButton = actionButton('showcase_mine', 'booster__btn', () => showcase.open());
-    const tradeButton = actionButton('trade_open', 'booster__btn', () => trade.open());
+    const showcaseButton = actionButton('showcase_mine', 'banner__btn', () => showcase.open());
+    const tradeButton = actionButton('trade_open', 'banner__btn', () => trade.open());
     const adventBadge = el('span', 'advent-btn__badge');
-    const adventButton = actionButton('advent_open', 'booster__btn', () => advent.open(), adventBadge);
+    // Libellé court sur petit écran.
+    const adventButton = actionButton('advent_open', 'banner__btn banner__btn--advent', () => advent.open(), text('span', 'banner__short', 'advent_short'), adventBadge);
+    adventButton.firstChild.classList.add('banner__long');
+    menu.append(adventButton, tradeButton, showcaseButton);
     const revealLink = actionButton('cards_reveal_all', 'booster__link', revealAll);
     const resetLink = actionButton('cards_reset', 'booster__link', () => {
         if (!window.confirm(t('cards_reset_confirm'))) return;
@@ -251,7 +261,7 @@ function start(theme) {
     document.body.append(el('div', 'hud', {}, balance, hudButton, hudAdvent));
 
     const label = el('p', 'collection__label', {}, text('span', '', 'cards_collection'), ' ', count);
-    bar.append(el('div', 'collection__main', {}, label, progress, chips), el('div', 'collection__actions', {}, openButton, adventButton, tradeButton, showcaseButton, sellButton, revealLink, resetLink));
+    bar.append(el('div', 'collection__main', {}, label, progress, chips), el('div', 'collection__actions', {}, openButton, sellButton, revealLink, resetLink));
 
     function update() {
         cards.forEach(showCard);

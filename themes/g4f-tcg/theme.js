@@ -75,6 +75,8 @@ export default {
         //        1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
         boosters: [1, 1, 1, 2, 1, 2, 3, 1, 2, 2, 3, 1, 4, 2, 3, 2, 4, 3, 2, 4, 3, 4, 2, 5],
     },
+    // Décor de Noël (neige, guirlande) entre ces deux dates incluses.
+    christmas: { from: '2026-11-24', to: '2027-01-06' },
     texts: {},
 
     cards,
