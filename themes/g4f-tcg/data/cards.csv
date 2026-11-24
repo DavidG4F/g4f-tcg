@@ -1,14 +1,15 @@
-﻿id;name;album;type;rarity;subtitle;text;long;image;fit;stats;links
-nouvelle-recrue;La nouvelle recrue;equipe;membre;commune;Premier jour;Badge tout neuf, regard curieux : elle a déjà trouvé la machine à café.;;;;;
-dev-nocturne;Le développeur nocturne;equipe;membre;rare;Pôle technique;Ses meilleurs commits partent après 23 h.;;;;Café=4 par jour|Commits=Beaucoup;
-cheffe-projet;La cheffe de projet;equipe;membre;ultra;Pôle projets;Elle connaît chaque échéance par cœur, et celles d'après aussi.;;;;;
-pilier;Le pilier;equipe;membre;legendaire;Depuis toujours;Il était là avant le premier serveur, et il sera là après le dernier.;;;;Ancienneté=Depuis toujours;
-machine-cafe;La machine à café;materiel;materiel;commune;Cuisine;Carburant officiel de l'équipe. Panne = alerte rouge.;;;;;
-clavier-meca;Le clavier mécanique;materiel;materiel;commune;Poste de travail;On l'entend depuis l'autre bout de l'open space.;;;;;
-ecran-geant;L'écran géant;materiel;materiel;rare;Salle de réunion;Il affiche les démos… quand le câble HDMI coopère.;;;;;
-serveur;Le serveur historique;materiel;materiel;ultra;Salle serveur;Personne n'ose le redémarrer.;"Personne n'ose le redémarrer.
-Personne ne sait vraiment ce qu'il fait tourner.";;;Disponibilité=99,9 %;
-pot-fin-annee;Le pot de fin d'année;moments;moment;commune;Décembre;Bulles, discours et photo de groupe floue.;;;;;
-mise-en-prod;La mise en prod du vendredi;moments;moment;rare;Vendredi 17 h;Tout le monde retient son souffle.;;;;;
-seminaire;Le séminaire;moments;moment;ultra;Hors les murs;Deux jours, un thème, beaucoup de post-it.;;;;;
-premier-client;Le premier client;moments;moment;legendaire;Jour J;La signature qui a tout lancé.;;;;;
+﻿id,name,album,type,rarity,subtitle,text,long,image,fit,stats,links
+stagiaire,Le stagiaire,team,membre,commune,Premier jour,"Badge tout neuf, regard curieux : elle a déjà trouvé la machine à café.",,,,,
+dev-nocturne,Le développeur nocturne,team,membre,rare,Pôle technique,Ses meilleurs commits partent après 23 h.,,,,Café=4 par jour|Commits=Beaucoup,
+cheffe-projet,La cheffe de projet,team,membre,ultra,Pôle projets,"Elle connaît chaque échéance par cœur, et celles d'après aussi.",,,,,
+pilier,Le pilier,team,membre,legendaire,Depuis toujours,"Il était là avant le premier serveur, et il sera là après le dernier.",,,,Ancienneté=Depuis toujours,
+machine-cafe,La machine à café,matos,matos,commune,Cuisine,Carburant officiel de l'équipe. Panne = alerte rouge.,,,,,
+clavier-meca,Le clavier mécanique,matos,matos,commune,Poste de travail,On l'entend depuis l'autre bout de l'open space.,,,,,
+ecran-geant,L'écran géant,matos,matos,rare,Salle de réunion,Il affiche les démos… quand le câble HDMI coopère.,,,,,
+serveur,Le serveur historique,matos,matos,ultra,Salle serveur,Personne n'ose le redémarrer.,"Personne n'ose le redémarrer.
+Personne ne sait vraiment ce qu'il fait tourner.",,,"Disponibilité=99,9 %",
+pot-fin-annee,Le pot de fin d'année,moments,moment,commune,Décembre,"Bulles, discours et photo de groupe floue.",,,,,
+mise-en-prod,La mise en prod du vendredi,moments,moment,rare,Vendredi 17 h,Tout le monde retient son souffle.,,,,,
+seminaire,Le séminaire,moments,moment,ultra,Hors les murs,"Deux jours, un thème, beaucoup de post-it.",,,,,
+premier-client,Le premier client,moments,moment,legendaire,Jour J,La signature qui a tout lancé.,,,,,
+david,God Davido,team,membre,legendaire,Le Christ Cosmique,"le roi et le pape Pierre, président de la république démocratique et cosmique",,,,,
