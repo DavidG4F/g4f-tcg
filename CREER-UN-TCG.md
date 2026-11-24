@@ -290,6 +290,8 @@ tcg/
 │   ├── player.js            sauvegarde et règles : cartes, pièces, boosters, revente, tri, vitrine
 │   ├── draw.js              tirage d'un booster
 │   ├── booster.js           fenêtre d'ouverture : paquet, cartes, résultat
+│   ├── calendar.js          calendrier de l'Avent : dates et cases, sans affichage
+│   ├── advent.js            fenêtre du calendrier de l'Avent
 │   ├── detail.js            détail d'une carte
 │   ├── labels.js            cœur favori et étiquettes
 │   ├── showcase.js          vitrine : composition, lien, lecture
@@ -404,6 +406,7 @@ Dans chaque liste, les `id` sont uniques.
 | `trade.allowLastCopy` | `true` |
 | `trade.server` | `null` (service public), sinon `{ host, port, path, secure }` |
 | `showcase.size` | `6` |
+| `advent` | `null` (pas de calendrier), sinon `{ start: 'AAAA-MM-JJ', end: 'AAAA-MM-JJ', boosters: [nombre par case] }` : une case par jour à partir de `start`, ouvrable une fois, jusqu'à `end` inclus (voir 9.8) |
 | `texts` | `{}` : n'importe quelle clé de `strings.js` |
 
 ---
@@ -642,6 +645,8 @@ Clé `localStorage` : `tcg-<id du thème>`.
     "known": ["mars"],
     "coins": 140,
     "free": { "stock": 1, "at": 1795480080918 },
+    "gifts": 3,
+    "advent": { "start": "2026-12-01", "opened": [1, 2, 7] },
     "id": "identifiant aléatoire du joueur",
     "name": "pseudo",
     "favorites": ["mars"],
@@ -660,6 +665,16 @@ Toute valeur absente ou invalide reprend son défaut. Les `id` inconnus du thèm
 3. Sinon : salon éventuel.
 
 Le `#…` est retiré de l'adresse une fois lu. Une seule fenêtre à la fois.
+
+### 9.8 Calendrier de l'Avent (`calendar.js`, `advent.js`)
+
+- La case *n* s'ouvre le jour `start + n − 1`, à minuit, **heure locale du joueur**. Une case manquée reste ouvrable jusqu'à `end` inclus ; après, plus aucune.
+- Chaque case s'ouvre une seule fois et donne ses boosters dans une réserve `gifts`, sans plafond et sans expiration. Le nombre est le même pour tout le monde (`advent.boosters`).
+- Un booster se paie dans cet ordre : réserve gratuite, puis `gifts`, puis pièces. « Gratuit ×n » compte les deux réserves.
+- Les cases ouvertes sont enregistrées avec la date `start` : changer `start` remet le calendrier à zéro pour tout le monde.
+- Le bouton apparaît avant `start` (tout fermé) et disparaît après `end`. Une pastille compte les cases à ouvrir, aussi en bas de l'écran.
+- Pour essayer : `?date=AAAA-MM-JJ` dans l'adresse simule un autre jour, **seulement sur `localhost` ou `127.0.0.1`**.
+- Comme le reste de la sauvegarde, rien n'empêche un joueur d'avancer l'horloge de son ordinateur.
 
 ---
 
@@ -887,11 +902,11 @@ Code complet et testé du moteur, du thème de départ et des outils. Un assista
 ~~~~html
 <!DOCTYPE html>
 <!-- data-theme : dossier du thème à afficher, dans themes/ -->
-<html lang="fr" data-theme="cosmos">
+<html lang="fr" data-theme="g4f-tcg">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TCG</title>
+    <title>G4F TCG</title>
     <link rel="stylesheet" href="engine/style.css">
     <script type="module" src="engine/main.js"></script>
 </head>
@@ -899,6 +914,124 @@ Code complet et testé du moteur, du thème de départ et des outils. Un assista
     <noscript>Ce jeu a besoin de JavaScript. This game requires JavaScript.</noscript>
 </body>
 </html>
+~~~~
+
+### `engine/advent.js`
+
+~~~~js
+// Fenêtre du calendrier de l'Avent : une porte par jour, qui s'ouvre sur des boosters offerts.
+import { burst, el, setText, text } from './card.js';
+import { parseDay } from './calendar.js';
+import { createModal } from './modal.js';
+import { motif } from './motif.js';
+import { t } from './strings.js';
+
+// Les portes sont dispersées comme sur un vrai calendrier ; la même disposition pour tout le monde.
+const ORDER_24 = [13, 4, 20, 9, 1, 17, 22, 6, 11, 15, 2, 19, 24, 8, 14, 3, 21, 10, 5, 18, 12, 23, 7, 16];
+
+/** onPlay : ouvrir les boosters reçus ; onChange : après l'ouverture d'une case. */
+export function createAdvent({ player, language, onPlay, onChange }) {
+    const closeButton = el('button', 'detail__close', { type: 'button', textContent: '×' });
+    const title = text('h2', 'advent__title', 'advent_title');
+    title.id = 'advent-title';
+    const intro = el('p', 'advent__intro');
+    const grid = el('div', 'advent__grid');
+    const message = el('p', 'advent__message');
+    message.setAttribute('aria-live', 'polite');
+    const actions = el('div', 'booster__actions');
+    const overlay = el('div', 'advent', {},
+        el('div', 'advent__layout', {}, title, intro, grid, el('div', 'advent__footer', {}, message, actions)),
+        closeButton);
+    overlay.setAttribute('aria-labelledby', 'advent-title');
+    const modal = createModal(overlay, close);
+
+    const formatDate = (date) => {
+        const value = new Intl.DateTimeFormat(language, { day: 'numeric', month: 'long' }).format(date);
+        return language.startsWith('fr') && date.getDate() === 1 ? value.replace(/^1(?=\s)/, '1er') : value; // « 1er décembre »
+    };
+    const unit = (count) => t(count > 1 ? 'advent_boosters' : 'advent_booster');
+
+    /** Contenu d'une case ouverte : le paquet et le nombre de boosters. */
+    const inside = (boosters) => [motif(), el('strong', 'advent__amount', { textContent: `×${boosters}` }), el('span', 'advent__unit', { textContent: unit(boosters) })];
+
+    function door(box, isLast) {
+        const node = el('button', `advent__door${isLast ? ' advent__door--last' : ''}`, { type: 'button' },
+            el('span', 'advent__inside', {}, ...(box.isOpened ? inside(box.boosters) : [])),
+            el('span', 'advent__leaf', {}, el('span', 'advent__number', { textContent: box.day })));
+        node.dataset.state = box.isOpened ? 'opened' : box.canOpen ? 'ready' : 'locked';
+        const label = `${t('advent_day')} ${box.day}`;
+        node.setAttribute('aria-label', box.isOpened ? `${label}, ${box.boosters} ${unit(box.boosters)}`
+            : box.isLocked ? `${label}, ${t('advent_locked')} ${formatDate(box.date)}` : label);
+        node.addEventListener('click', () => {
+            if (node.dataset.state === 'ready') openDoor(node, box);
+            else if (node.dataset.state === 'opened') message.textContent = `${t('advent_day')} ${box.day} : ${t('advent_opened').toLowerCase()}.`;
+            else if (box.isLocked) message.textContent = `${t('advent_locked')} ${formatDate(box.date)}.`;
+        });
+        return node;
+    }
+
+    function openDoor(node, box) {
+        const boosters = player.openAdvent(box.day);
+        if (!boosters) { // déjà ouverte dans un autre onglet, ou jour passé entre-temps
+            render();
+            return;
+        }
+        node.querySelector('.advent__inside').replaceChildren(...inside(boosters));
+        node.dataset.state = 'opened';
+        node.classList.add('is-opening');
+        node.setAttribute('aria-label', `${t('advent_day')} ${box.day}, ${boosters} ${unit(boosters)}`);
+        burst(node, { color: getComputedStyle(document.documentElement).getPropertyValue('--coin'), particles: 10 + boosters * 6 });
+        message.textContent = `${t('advent_got')} ${boosters} ${unit(boosters)} !`;
+        onChange();
+        showActions();
+    }
+
+    function showActions() {
+        const ready = player.freeBoosters;
+        actions.replaceChildren();
+        if (!ready) return;
+        const play = el('button', 'booster__btn booster__btn--main', { type: 'button' }, text('span', '', 'advent_play'), ` ×${ready}`);
+        play.addEventListener('click', () => {
+            close();
+            onPlay();
+        });
+        actions.append(play);
+    }
+
+    function render() {
+        const { advent } = player.rules;
+        const days = player.adventDays;
+        const byDay = new Map(days.map((box) => [box.day, box]));
+        const order = days.length === ORDER_24.length ? ORDER_24 : days.map(({ day }) => day);
+        grid.replaceChildren(...order.map((day) => door(byDay.get(day), day === days.length)));
+
+        const status = player.adventStatus;
+        if (status === 'soon') intro.textContent = `${t('advent_soon')} ${formatDate(parseDay(advent.start))}.`;
+        else if (status === 'over') setText(intro, 'advent_over');
+        else intro.textContent = `${t('advent_intro')} ${t('advent_until')} ${formatDate(parseDay(advent.end))}.`;
+        showActions();
+    }
+
+    function open() {
+        if (!overlay.hidden) return;
+        closeButton.setAttribute('aria-label', t('cards_close'));
+        message.textContent = '';
+        modal.open();
+        overlay.scrollTop = 0;
+        render();
+        (grid.querySelector('[data-state="ready"]') ?? closeButton).focus({ preventScroll: true });
+    }
+
+    function close() {
+        if (overlay.hidden) return;
+        modal.close();
+        grid.replaceChildren();
+    }
+
+    closeButton.addEventListener('click', close);
+    overlay.addEventListener('click', (event) => { if (event.target === overlay) close(); });
+    return { open };
+}
 ~~~~
 
 ### `engine/booster.js`
@@ -1188,6 +1321,60 @@ export function createBooster({ player, pack: packTexts, size, draw, describe, o
     }
 
     return { open };
+}
+~~~~
+
+### `engine/calendar.js`
+
+~~~~js
+// Calendrier de l'Avent : quelles cases peuvent s'ouvrir, et quand. Sans affichage : se teste sous Node.
+// Les jours suivent l'heure locale du joueur.
+
+/** Vrai pour une date 'AAAA-MM-JJ' qui existe. */
+export function isDay(value) {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const [year, month, day] = value.split('-').map(Number);
+    const date = parseDay(value);
+    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+}
+
+/** 'AAAA-MM-JJ' → ce jour à minuit, heure locale. */
+export function parseDay(value) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
+/** Minuit du jour de time (millisecondes). */
+export function startOfDay(time) {
+    const date = new Date(time);
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+/** Avant, pendant ou après le calendrier : 'none' (pas de calendrier), 'soon', 'open' ou 'over'. */
+export function adventStatus(advent, now) {
+    if (!advent) return 'none';
+    const today = startOfDay(now).getTime();
+    if (today < parseDay(advent.start).getTime()) return 'soon';
+    return today > parseDay(advent.end).getTime() ? 'over' : 'open';
+}
+
+/**
+ * Cases du calendrier, de la première à la dernière : [{ day, boosters, date, isOpened, isLocked, canOpen }].
+ * advent : { start, end, boosters } du thème ; opened : ensemble des numéros de cases déjà ouvertes.
+ * Une case s'ouvre à partir de son jour, une seule fois, et jusqu'à la fin du calendrier.
+ */
+export function adventDays(advent, now, opened) {
+    if (!advent) return [];
+    const isOver = adventStatus(advent, now) === 'over';
+    const today = startOfDay(now).getTime();
+    const start = parseDay(advent.start);
+    return advent.boosters.map((boosters, i) => {
+        const day = i + 1;
+        const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+        const isOpened = opened.has(day);
+        const isLocked = today < date.getTime();
+        return { day, boosters, date, isOpened, isLocked, canOpen: !isOpened && !isLocked && !isOver };
+    });
 }
 ~~~~
 
@@ -1655,7 +1842,9 @@ export function labelDots(player, card) {
 
 ~~~~js
 // Point d'entrée : charge le thème, construit la page et relie les cartes, les boosters et les échanges.
+import { createAdvent } from './advent.js';
 import { createBooster } from './booster.js';
+import { isDay, parseDay, startOfDay } from './calendar.js';
 import { actionButton, coins, createCard, el, text } from './card.js';
 import { createDetail } from './detail.js';
 import { drawBooster } from './draw.js';
@@ -1681,6 +1870,20 @@ function segmented(options, selected, onPick) {
     const group = el('div', 'segmented', {}, ...buttons);
     group.setAttribute('role', 'group');
     return group;
+}
+
+const GIFT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>';
+
+/**
+ * Horloge du jeu. Sur un serveur local seulement, ?date=AAAA-MM-JJ simule un autre jour pour essayer le calendrier ;
+ * en ligne, ce paramètre est ignoré.
+ */
+function gameClock() {
+    const value = new URLSearchParams(location.search).get('date');
+    const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+    if (!isLocal || !isDay(value)) return Date.now;
+    const offset = parseDay(value).getTime() - startOfDay(Date.now()).getTime();
+    return () => Date.now() + offset;
 }
 
 function setIcon() {
@@ -1730,7 +1933,7 @@ function start(theme) {
     const { rarities } = theme;
     const { bar, albumBar, filters, empty, sections } = buildPage(theme);
     const cards = theme.cards.map((card) => ({ ...card, node: el('div', 'tile'), isShown: null }));
-    const player = new Player(cards, { gameId: theme.id, economy: theme.economy, trade: theme.trade, showcase: theme.showcase });
+    const player = new Player(cards, { gameId: theme.id, economy: theme.economy, trade: theme.trade, showcase: theme.showcase, advent: theme.advent }, gameClock());
     const newCards = new Set(); // découvertes pendant cette visite
 
     // --- Grilles : seules les cartes possédées sont visibles ---
@@ -1868,6 +2071,8 @@ function start(theme) {
     sellButton.append(' ', sellValue);
     const showcaseButton = actionButton('showcase_mine', 'booster__btn', () => showcase.open());
     const tradeButton = actionButton('trade_open', 'booster__btn', () => trade.open());
+    const adventBadge = el('span', 'advent-btn__badge');
+    const adventButton = actionButton('advent_open', 'booster__btn', () => advent.open(), adventBadge);
     const revealLink = actionButton('cards_reveal_all', 'booster__link', revealAll);
     const resetLink = actionButton('cards_reset', 'booster__link', () => {
         if (!window.confirm(t('cards_reset_confirm'))) return;
@@ -1882,10 +2087,14 @@ function start(theme) {
     const hudPrice = el('span', 'hud__price');
     const hudButton = el('button', 'floating-booster', { type: 'button' }, motif(), text('span', '', 'cards_open_booster'), hudPrice);
     hudButton.addEventListener('click', () => booster.open());
-    document.body.append(el('div', 'hud', {}, balance, hudButton));
+    // Rappel du calendrier, visible seulement quand une case attend d'être ouverte.
+    const hudAdventBadge = el('span', 'advent-btn__badge');
+    const hudAdvent = el('button', 'hud__advent', { type: 'button', innerHTML: GIFT_ICON }, hudAdventBadge);
+    hudAdvent.addEventListener('click', () => advent.open());
+    document.body.append(el('div', 'hud', {}, balance, hudButton, hudAdvent));
 
     const label = el('p', 'collection__label', {}, text('span', '', 'cards_collection'), ' ', count);
-    bar.append(el('div', 'collection__main', {}, label, progress, chips), el('div', 'collection__actions', {}, openButton, tradeButton, showcaseButton, sellButton, revealLink, resetLink));
+    bar.append(el('div', 'collection__main', {}, label, progress, chips), el('div', 'collection__actions', {}, openButton, adventButton, tradeButton, showcaseButton, sellButton, revealLink, resetLink));
 
     function update() {
         cards.forEach(showCard);
@@ -1906,6 +2115,22 @@ function start(theme) {
         revealLink.hidden = player.isComplete || !theme.booster.allowRevealAll;
         resetLink.hidden = player.discovered === 0;
         showBalance();
+        showAdvent();
+    }
+
+    let shownAdvent = '';
+    /** Bouton du calendrier, pendant le calendrier et juste avant, avec le nombre de cases à ouvrir ; rappelé chaque seconde. */
+    function showAdvent() {
+        const status = player.adventStatus;
+        const ready = status === 'open' ? player.adventDays.filter((box) => box.canOpen).length : 0;
+        const state = `${status}|${ready}`;
+        if (state === shownAdvent) return;
+        shownAdvent = state;
+        adventButton.hidden = status === 'none' || status === 'over';
+        adventBadge.hidden = hudAdventBadge.hidden = !ready;
+        adventBadge.textContent = hudAdventBadge.textContent = ready;
+        hudAdvent.hidden = !ready;
+        hudAdvent.setAttribute('aria-label', `${t('advent_open')} : ${ready} ${t('advent_ready')}`);
     }
 
     let shownBalance = '';
@@ -1925,7 +2150,10 @@ function start(theme) {
         else if (canOpen) hudPrice.replaceChildren(coins(theme.economy.boosterPrice));
         else hudPrice.replaceChildren(text('span', '', 'booster_next'), ` ${countdown}`);
     }
-    setInterval(showBalance, 1000);
+    setInterval(() => {
+        showBalance();
+        showAdvent(); // une nouvelle case à minuit
+    }, 1000);
 
     function revealAll() {
         player.revealAll();
@@ -1970,6 +2198,15 @@ function start(theme) {
             received(results);
             update();
         },
+    });
+
+    // --- Calendrier de l'Avent ---
+
+    const advent = createAdvent({
+        player,
+        language: theme.language,
+        onChange: update,
+        onPlay: () => booster.open(),
     });
 
     // --- Vitrine ---
@@ -2109,8 +2346,9 @@ export function motif() {
 ### `engine/player.js`
 
 ~~~~js
-// Sauvegarde du joueur, gardée dans son navigateur : cartes possédées, pièces, boosters gratuits,
-// favoris, étiquettes et vitrine.
+// Sauvegarde du joueur, gardée dans son navigateur : cartes possédées, pièces, boosters gratuits et offerts,
+// calendrier de l'Avent, favoris, étiquettes et vitrine.
+import { adventDays, adventStatus } from './calendar.js';
 
 export const NAME_LENGTH = 20;
 export const TITLE_LENGTH = 40;
@@ -2125,9 +2363,10 @@ export class Player {
     #favorites = new Set();
     #labelled = new Map(); // carte → ensemble d'identifiants d'étiquettes
     #showcase = []; // cartes exposées, même celles qu'on n'a plus
+    #advent = new Set(); // numéros des cases du calendrier déjà ouvertes
     #now;
 
-    /** rules : { gameId, economy, trade, showcase }, tirés du thème. now est remplaçable pour les tests. */
+    /** rules : { gameId, economy, trade, showcase, advent }, tirés du thème. now est remplaçable pour les tests. */
     constructor(cards, rules, now = Date.now) {
         this.cards = cards;
         this.rules = rules;
@@ -2147,6 +2386,8 @@ export class Player {
         this.#favorites.clear();
         this.#labelled.clear();
         this.#showcase = [];
+        this.#advent.clear();
+        this.gifts = 0; // boosters offerts (calendrier) : sans plafond, ouverts après les gratuits
         this.showcaseTitle = '';
         this.labels = []; // { id, name, color }
         this.isFirstVisit = true;
@@ -2168,6 +2409,12 @@ export class Player {
             for (const card of this.cards) if (this.has(card) || saved.known?.includes?.(card.id)) this.#known.add(card);
             if (Number.isFinite(saved.coins) && saved.coins >= 0) this.coins = saved.coins;
             if (Number.isInteger(saved.free?.stock) && Number.isFinite(saved.free?.at)) this.free = saved.free;
+            if (Number.isInteger(saved.gifts) && saved.gifts >= 0) this.gifts = saved.gifts;
+            // Les cases ouvertes ne valent que pour le calendrier en cours : un nouveau calendrier repart de zéro.
+            const advent = this.rules.advent;
+            if (advent && saved.advent?.start === advent.start && Array.isArray(saved.advent.opened)) {
+                for (const day of saved.advent.opened) if (Number.isInteger(day) && day >= 1 && day <= advent.boosters.length) this.#advent.add(day);
+            }
             if (typeof saved.id === 'string') this.id = saved.id;
             if (typeof saved.name === 'string') this.name = saved.name;
             this.#loadSorting(saved);
@@ -2195,6 +2442,8 @@ export class Player {
                 known: [...this.#known].map((card) => card.id),
                 coins: this.coins,
                 free: this.free,
+                gifts: this.gifts,
+                advent: this.rules.advent ? { start: this.rules.advent.start, opened: [...this.#advent] } : undefined,
                 id: this.id,
                 name: this.name,
                 favorites: [...this.#favorites].map((card) => card.id),
@@ -2290,9 +2539,10 @@ export class Player {
         else if (gained > 0) this.free = { stock: this.free.stock + gained, at: this.free.at + gained * period };
     }
 
+    /** Boosters qui s'ouvrent sans payer : gratuits et offerts. */
     get freeBoosters() {
         this.#refill();
-        return this.free.stock;
+        return this.free.stock + this.gifts;
     }
 
     /** Millisecondes avant le prochain booster gratuit, 0 si la réserve est pleine. */
@@ -2306,13 +2556,39 @@ export class Player {
         return this.freeBoosters > 0 || this.coins >= this.rules.economy.boosterPrice;
     }
 
-    /** Paie un booster, gratuit si possible. Renvoie false si c'est impossible. */
+    /**
+     * Paie un booster : gratuit d'abord (sa réserve est plafonnée, l'entamer relance la recharge),
+     * puis offert, puis en pièces. Renvoie false si c'est impossible.
+     */
     payBooster() {
         if (!this.canOpenBooster) return false;
         if (this.free.stock > 0) this.free = { ...this.free, stock: this.free.stock - 1 };
+        else if (this.gifts > 0) this.gifts--;
         else this.coins -= this.rules.economy.boosterPrice;
         this.save();
         return true;
+    }
+
+    // --- Calendrier de l'Avent ---
+
+    /** Cases du calendrier, avec leur état : voir calendar.js. Vide si le thème n'a pas de calendrier. */
+    get adventDays() {
+        return adventDays(this.rules.advent, this.#now(), this.#advent);
+    }
+
+    /** 'none', 'soon', 'open' ou 'over' : voir calendar.js. */
+    get adventStatus() {
+        return adventStatus(this.rules.advent, this.#now());
+    }
+
+    /** Ouvre une case, si son jour est venu et qu'elle ne l'a pas déjà été. Renvoie le nombre de boosters reçus, 0 sinon. */
+    openAdvent(day) {
+        const box = this.adventDays.find((other) => other.day === day);
+        if (!box?.canOpen) return 0;
+        this.#advent.add(day);
+        this.gifts += box.boosters;
+        this.save();
+        return box.boosters;
     }
 
     // --- Revente ---
@@ -2983,6 +3259,20 @@ export const STRINGS = {
     showcase_owned: 'Vous l\'avez',
     showcase_missing: 'Il vous manque',
     showcase_close: 'Voir ma collection',
+    advent_open: 'Calendrier de l\'Avent',
+    advent_title: 'Calendrier de l\'Avent',
+    advent_intro: 'Chaque jour, une nouvelle case s\'ouvre, avec des boosters à l\'intérieur.',
+    advent_until: 'Une case oubliée ? Elle vous attend jusqu\'au',
+    advent_soon: 'Le calendrier ouvre le',
+    advent_over: 'Le calendrier est terminé. Rendez-vous l\'année prochaine !',
+    advent_day: 'Case',
+    advent_locked: 'Patience : cette case s\'ouvre le',
+    advent_opened: 'Déjà ouverte',
+    advent_booster: 'booster',
+    advent_boosters: 'boosters',
+    advent_got: 'Vous recevez',
+    advent_ready: 'case(s) à ouvrir',
+    advent_play: 'Ouvrir mes boosters',
 };
 
 let themeTexts = {};
@@ -3537,6 +3827,66 @@ button.label-chip:focus-visible { outline: 2px solid var(--accent); outline-offs
     .showcase__shelf { --card: min(9.5rem, 41vw); gap: 1.5rem 1rem; }
 }
 
+/* ---------- Calendrier de l'Avent ---------- */
+
+.advent { position: fixed; inset: 0; z-index: 900; overflow-x: hidden; overflow-y: auto; background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--coin) 14%, var(--background-glow)), var(--background) 62%); outline: none; animation: booster-in 0.3s ease-out; }
+.advent__layout { display: flex; flex-direction: column; align-items: center; max-width: 46rem; min-height: 100%; margin: 0 auto; padding: 2.25rem 1.5rem 0; text-align: center; }
+.advent__title { padding: 0 3rem; font-size: clamp(1.75rem, 5vw, 2.75rem); font-weight: 700; line-height: 1.15; text-wrap: balance; }
+.advent__intro { max-width: 34rem; margin: 0.75rem auto 0; color: var(--text-soft); text-wrap: balance; }
+/* 5 colonnes : 23 portes et la dernière, en double largeur */
+/* Assez petite pour tenir dans la hauteur de l'écran avec le titre et le bouton, sans descendre sous 18rem */
+.advent__grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-flow: dense; gap: clamp(0.5rem, 2vw, 1rem); width: min(100%, max(18rem, min(36rem, 100vh - 19rem))); margin: 1.75rem 0 1rem; }
+.advent__door { position: relative; aspect-ratio: 1; border-radius: 0.75rem; perspective: 40rem; container-type: inline-size; }
+.advent__door--last { grid-column: span 2; aspect-ratio: auto; }
+.advent__door:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.advent__inside { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; border-radius: inherit; background: radial-gradient(circle, color-mix(in srgb, var(--coin) 28%, transparent), transparent 70%), var(--background); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--coin) 40%, transparent); }
+.advent__inside .motif { width: 36%; height: 26%; color: var(--pack-motif); }
+.advent__door--last .advent__inside .motif { width: 18%; }
+.advent__amount { color: var(--coin); font-size: max(0.9375rem, 20cqw); line-height: 1; }
+.advent__door--last .advent__amount { font-size: max(1.25rem, 12cqw); }
+.advent__unit { color: var(--text-soft); font-size: max(0.625rem, 10cqw); line-height: 1; }
+.advent__door--last .advent__unit { font-size: max(0.75rem, 6cqw); }
+.advent__leaf {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: inherit;
+    background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.14), transparent 55%), linear-gradient(160deg, var(--pack-1), var(--pack-2) 60%, var(--pack-3));
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.35);
+    transform-origin: left center;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transition: transform 0.8s cubic-bezier(0.3, 0.7, 0.3, 1), opacity 0.8s;
+}
+.advent__leaf::before { content: ""; position: absolute; inset: 7%; border: 1px dashed rgba(255, 255, 255, 0.28); border-radius: 0.5rem; }
+.advent__door--last .advent__leaf { border-color: color-mix(in srgb, var(--coin) 60%, transparent); background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.2), transparent 55%), linear-gradient(160deg, color-mix(in srgb, var(--coin) 45%, var(--pack-1)), var(--pack-2) 65%, var(--pack-3)); }
+.advent__number { color: var(--on-pack); font: 700 max(1.125rem, 34cqw) / 1 var(--font-heading); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); }
+.advent__door--last .advent__number { font-size: max(1.5rem, 22cqw); }
+.advent__door[data-state="locked"] { cursor: default; }
+.advent__door[data-state="locked"] .advent__leaf { filter: saturate(0.35) brightness(0.65); }
+.advent__door[data-state="ready"] .advent__leaf { box-shadow: 0 0 0 2px var(--coin), 0 0 1.25rem color-mix(in srgb, var(--coin) 55%, transparent); animation: advent-glow 1.6s ease-in-out infinite alternate; }
+.advent__door[data-state="ready"]:hover .advent__leaf { transform: rotateY(-16deg); }
+.advent__door[data-state="opened"] .advent__leaf { transform: rotateY(-104deg); opacity: 0.55; pointer-events: none; animation: none; }
+.advent__door.is-opening { z-index: 2; animation: advent-pop 0.6s 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+/* Message et bouton restent visibles en bas, même quand la grille dépasse */
+.advent__footer { position: sticky; bottom: 0; z-index: 3; display: grid; gap: 0.75rem; width: 100%; margin-top: auto; padding: 1rem 0 1.5rem; background: linear-gradient(transparent, var(--background) 35%); }
+.advent__message { min-height: 1.5em; color: var(--text-soft); }
+
+.advent-btn__badge { margin-left: 0.5rem; padding: 0 0.5rem; border-radius: 999px; background: var(--coin); color: var(--on-accent); font-size: 0.8125rem; font-weight: 700; }
+.hud__advent { position: relative; display: grid; place-items: center; width: 3rem; height: 3rem; border: 1px solid color-mix(in srgb, var(--coin) 60%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--background) 92%, transparent); color: var(--coin); box-shadow: 0 0 1rem color-mix(in srgb, var(--coin) 35%, transparent); transition: transform 0.2s; }
+.hud__advent:hover { transform: translateY(-2px); }
+.hud__advent:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.hud__advent svg { width: 1.375rem; height: 1.375rem; }
+.hud__advent .advent-btn__badge { position: absolute; top: -0.375rem; right: -0.375rem; margin: 0; }
+
+@media (max-width: 768px) {
+    .advent__layout { padding: 1.5rem 1rem 0; }
+    .hud__advent { width: 2.625rem; height: 2.625rem; }
+}
+
 /* ---------- Barre de collection ---------- */
 
 .collection { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; margin-bottom: 2rem; padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: 0.75rem; background: color-mix(in srgb, var(--surface) 60%, transparent); }
@@ -3591,9 +3941,11 @@ button.label-chip:focus-visible { outline: 2px solid var(--accent); outline-offs
 @keyframes motif-pulse { from { transform: scale(0.75); opacity: 0.5; } to { transform: scale(1.05); } }
 @keyframes spin { to { rotate: 360deg; } }
 @keyframes flash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
+@keyframes advent-glow { to { box-shadow: 0 0 0 2px var(--coin), 0 0 2.25rem color-mix(in srgb, var(--coin) 75%, transparent); } }
+@keyframes advent-pop { 40% { transform: scale(1.12); } }
 
 @media (prefers-reduced-motion: reduce) {
-    .booster, .booster *, .booster::after, .floating-booster, .detail, .detail *, .trade, .trade *, .showcase, .showcase * { animation: none !important; transition: none !important; }
+    .booster, .booster *, .booster::after, .floating-booster, .detail, .detail *, .trade, .trade *, .showcase, .showcase *, .advent, .advent *, .hud__advent { animation: none !important; transition: none !important; }
     .fx { display: none; }
 }
 ~~~~
@@ -3602,6 +3954,7 @@ button.label-chip:focus-visible { outline: 2px solid var(--accent); outline-offs
 
 ~~~~js
 // Charge un thème, vérifie qu'il est complet et complète ce qu'il ne précise pas. Voir themes/cosmos/theme.js pour un exemple.
+import { isDay, parseDay } from './calendar.js';
 import { MOTIFS } from './motif.js';
 
 const EFFECTS = ['none', 'glow', 'burst', 'legend'];
@@ -3675,6 +4028,20 @@ export function checkTheme(theme) {
     need(Number.isInteger(showcase.size) && showcase.size > 0, 'showcase.size : nombre de cartes attendu');
     const free = { ...DEFAULT_ECONOMY.freeBooster, ...economy.freeBooster };
     need(isAmount(free.start) && isPositive(free.every) && isAmount(free.max), 'economy.freeBooster : start, every et max attendus');
+
+    // Calendrier de l'Avent, facultatif : { start: 'AAAA-MM-JJ', end: 'AAAA-MM-JJ', boosters: [boosters de chaque case] }
+    const { advent } = theme;
+    if (advent !== undefined && advent !== null) {
+        const isList = Array.isArray(advent.boosters) && advent.boosters.length > 0;
+        need(isList && advent.boosters.every((count) => Number.isInteger(count) && count > 0), 'advent.boosters : un nombre entier positif par case attendu');
+        need(isDay(advent.start), 'advent.start : date AAAA-MM-JJ attendue');
+        need(isDay(advent.end), 'advent.end : date AAAA-MM-JJ attendue');
+        if (isList && isDay(advent.start) && isDay(advent.end)) {
+            const start = parseDay(advent.start);
+            const last = new Date(start.getFullYear(), start.getMonth(), start.getDate() + advent.boosters.length - 1);
+            need(parseDay(advent.end) >= last, 'advent.end : doit être le jour de la dernière case ou après');
+        }
+    }
     return errors;
 }
 
@@ -3703,6 +4070,7 @@ export async function loadTheme(name) {
         fonts: {},
         pack: {},
         motif: 'star',
+        advent: null,
         ...theme,
         logo: asset(theme.logo),
         rarities,
