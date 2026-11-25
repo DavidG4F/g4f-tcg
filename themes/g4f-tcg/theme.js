@@ -57,6 +57,8 @@ export default {
         { id: 'matos', label: 'Le matos' },
         { id: 'moment', label: 'Moment' },
 	{ id: 'item', label: 'Les objets' },
+        { id: 'vinyle', label: 'Vinyle' },
+        { id: 'lieu', label: 'Les lieux' },
     ],
     albums,
     tags: [],

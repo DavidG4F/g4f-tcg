@@ -15,5 +15,13 @@ export default [
     {
         "id": "item",
         "label": "Les objets"
+    },
+    {
+        "id": "vinyles",
+        "label": "Les vinyles G4F Records"
+    },
+    {
+        "id": "lieu",
+        "label": "Les lieux"
     }
 ];

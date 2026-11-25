@@ -10,11 +10,9 @@ seminaire,Le séminaire,moments,moment,ultra,Hors les murs,"Deux jours, un thèm
 premier-client,Le premier client,moments,moment,legendaire,Jour J,La signature qui a tout lancé.,,,,,
 stagiaire,Le stagiaire,team,team,commune,Premier jour,"Badge tout neuf, regard curieux : elle a déjà trouvé la machine à café.",,,,,
 open-space,L'open space,lieu,lieu,commune,Espace de travail,Vous pouvez parler moins fort ? Je suis en call...,,,,Café=4 par jour|Commits=Beaucoup,
-,,,,,,,,,,,
-,,,,,,,,,,Ancienneté=Depuis toujours,
 david,God Davido,team,team,legendaire,Le Christ Cosmique,"le roi et le pape Pierre, président de la république démocratique et cosmique",,,,,
 florent,Florent,team,team,rare,,,,,,,
-corentin,Corentin,team,team,commune,,,,,,,
+corentin-b,Corentin,team,team,commune,,,,,,,
 edwige,Edwige,team,team,rare,,,,,,,
 michele,Michèle,team,team,rare,,,,,,,
 laurent,Laurent,team,team,commune,Tunnelman,,,,,,
@@ -26,7 +24,7 @@ victor,Victor,team,team,rare,,Bonchour,,,,,
 chiotte,Les chiottes,item,item,commune,Au fond du couloir,Faut bien évacuer le café,,,,,
 alexandra,Alexandra,team,team,rare,CFO,,,,,,
 antoine,Antoine,team,team,legendaire,Compositeur et freelance,Machine à bangers. Recherche un CDI à mi-temps !,,,,,
-corentin,Corentin G.,team,team,commune,Freelance,,,,,,
+corentin-g,Corentin G.,team,team,commune,Freelance,,,,,,
 theo,Théo,team,team,rare,Marketing Manager,Y'a un souci avec le vinyle,,,,,
 marie-pierre,Marie-Pierre,team,team,rare,Business Affairs,Le deal est en cours,,,,,
 ,,,,,,,,,,,
@@ -49,3 +47,27 @@ shure-sm7b,Micro Shure SM7B,matos,matos,commune,Un classique,Pour avoir une voix
 ,,,,,,,,,,,
 ,,,,,,,,,,,
 ,,,,,,,,,,,
+vinyle-furi,Furi,vinyles,vinyle,legendaire,2LP rose et bleu · 2016,"Le tout premier vinyle du label. Danger, Carpenter Brut, Lorn, The Toxic Avenger… Pochette de Takashi Okazaki.",,art/vinyles/vinyle-furi.jpg,,Format=2LP gatefold|Année=2016|Pressage noir=Événements seulement,Boutique=https://g4f-records.myshopify.com/en/products/furi-vinyl-edition
+vinyle-es2-memories,ES2 – Memories of the Lost,vinyles,vinyle,legendaire,Vinyle promo · Gamescom 2016,"Vinyle promo gris marbré, distribué uniquement à la Gamescom de Cologne en 2016. Musique de FlybyNo.",,,,Couleur=Gris marbré|Année=2016|Diffusion=Gamescom,
+vinyle-endless-space-2,Endless Space 2,vinyles,vinyle,ultra,2LP bleu translucide · 2019,"Financé par les fans, pressé à 250 exemplaires seulement.",,art/vinyles/vinyle-endless-space-2.jpg,,Format=2LP gatefold|Année=2019|Tirage=250 ex.,Boutique=https://g4f-records.myshopify.com/en/products/endless-space-2-double-vinyl-edition
+vinyle-seasons-after-fall,Seasons after Fall,vinyles,vinyle,ultra,2LP orange et vert · 2017,"Musique de Yann van der Cruyssen, pochette de Géraud Soulié. 300 exemplaires.",,art/vinyles/vinyle-seasons-after-fall.jpg,,Format=2LP gatefold|Année=2017|Tirage=300 ex.,Boutique=https://g4f-records.myshopify.com/en/products/seasons-after-fall-vinyl-edition
+vinyle-double-kick-heroes,Double Kick Heroes,vinyles,vinyle,ultra,3LP éclaboussé · 2022,"Trois disques rouges éclaboussés de noir, rose et jaune. Triple gatefold signé Guillaume Breton.",,art/vinyles/vinyle-double-kick-heroes.jpg,,Format=3LP triple gatefold|Année=2022,Boutique=https://g4f-records.myshopify.com/en/products/double-kick-heroes-vinyl-edition
+vinyle-haven,Haven,vinyles,vinyle,ultra,2LP jaune et rouge · 2021,Musique de Danger. Les 100 premières précommandes signées ; réédition bleu et rose à 260 ex. en 2022.,,art/vinyles/vinyle-haven.jpg,,Format=2LP 180 g gatefold|Année=2021|Compositeur=Danger,Boutique=https://g4f-records.myshopify.com/en/products/haven-vinyl-edition
+vinyle-humankind,Humankind,vinyles,vinyle,rare,2LP blanc marbré · 2022,"Triple gatefold, livré avec un poster. 200 premières précommandes signées par Arnaud Roy.",,art/vinyles/vinyle-humankind.jpg,,Format=2LP 180 g|Année=2022|Compositeur=Arnaud Roy,Boutique=https://g4f-records.myshopify.com/en/products/humankind-vinyl-edition
+vinyle-road-96,Road 96,vinyles,vinyle,rare,2LP jaune et noir · 2021,"La bande-son du road trip, en double vinyle 180 g.",,art/vinyles/vinyle-road-96.jpg,,Format=2LP 180 g gatefold|Année=2021,Boutique=https://g4f-records.myshopify.com/en/products/road-96-vinyl-edition
+vinyle-endless-legend,Endless Legend,vinyles,vinyle,rare,2LP blanc · 2019,Une sélection du jeu et de ses extensions. 200 premiers exemplaires signés par FlybyNo.,,art/vinyles/vinyle-endless-legend.jpg,,Format=2LP gatefold|Année=2019|Compositeur=FlybyNo,Boutique=https://g4f-records.myshopify.com/en/products/endless-legend-vinyl-edition
+vinyle-paper-beast,Paper Beast,vinyles,vinyle,rare,2LP blanc · 2020,"Double vinyle blanc 180 g, pochette de Pascal Lefort.",,art/vinyles/vinyle-paper-beast.jpg,,Format=2LP 180 g gatefold|Année=2020,Boutique=https://g4f-records.myshopify.com/en/products/paper-beast-vinyl-edition
+vinyle-strayed-lights,Strayed Lights,vinyles,vinyle,rare,2LP bleu et orange · 2023,"Un disque bleu clair, un disque orange, tous deux translucides. Pochette de Nicolas Fantoni.",,art/vinyles/vinyle-strayed-lights.jpg,,Format=2LP gatefold|Année=2023,Boutique=https://g4f-records.myshopify.com/en/products/strayed-lights-vinyl-edition
+vinyle-endless-dungeon,Endless Dungeon,vinyles,vinyle,rare,2LP or et noir · 2024,"Double vinyle 180 g marbré or et noir, en gatefold.",,art/vinyles/vinyle-endless-dungeon.jpg,,Format=2LP 180 g gatefold|Année=2024,Boutique=https://g4f-records.myshopify.com/en/products/endless-dungeon-vinyl-edition
+vinyle-fretless,Fretless,vinyles,vinyle,rare,2LP jaune marbré rouge · 2025,"The Wrath of Riffson. Double vinyle 180 g, illustrations de Mari Quinto.",,art/vinyles/vinyle-fretless.jpg,,Format=2LP 180 g gatefold|Année=2025,Boutique=https://g4f-records.myshopify.com/en/products/fretless-the-wrath-of-riffson-vinyl-edition-pre-order
+vinyle-solasta,Solasta,vinyles,vinyle,rare,2LP noir · 2021,"Crown of the Magister. Double vinyle 180 g noir, pochette dorée à chaud.",,art/vinyles/vinyle-solasta.jpg,,Format=2LP 180 g gatefold|Année=2021,Boutique=https://g4f-records.myshopify.com/en/products/solasta-crown-of-the-magister-vinyl-edition
+vinyle-2dark,2Dark,vinyles,vinyle,commune,LP rouge éclaboussé · 2017,"Musique de Samuel Safa, sur un disque rouge éclaboussé de noir.",,art/vinyles/vinyle-2dark.jpg,,Format=1LP|Année=2017|Compositeur=Samuel Safa,Boutique=https://g4f-records.myshopify.com/en/products/2dark-edition-vinyle
+vinyle-dungeon-endless,Dungeon of the Endless,vinyles,vinyle,commune,LP orange · 2021,Un seul disque orange 180 g pour descendre dans le donjon.,,art/vinyles/vinyle-dungeon-endless.jpg,,Format=1LP 180 g|Année=2021,Boutique=https://g4f-records.myshopify.com/en/products/dungeon-of-the-endless-vinyl-edition
+vinyle-caravan-sandwitch,Caravan SandWitch,vinyles,vinyle,commune,LP turquoise marbré · 2024,"Disque 180 g turquoise marbré, pochette gaufrée.",,art/vinyles/vinyle-caravan-sandwitch.jpg,,Format=1LP 180 g|Année=2024,Boutique=https://g4f-records.myshopify.com/en/products/caravan-sandwitch-vinyl-edition
+vinyle-to-hell-ugly,To Hell With The Ugly,vinyles,vinyle,commune,LP noir · 2025,"Un disque noir, une pochette à l'image du jeu.",,art/vinyles/vinyle-to-hell-ugly.jpg,,Format=1LP|Année=2025,Boutique=https://g4f-records.myshopify.com/en/products/to-hell-with-the-ugly-vinyl-edition
+vinyle-fading-echo,Fading Echo,vinyles,vinyle,commune,Vinyle,"La bande originale de Fading Echo, en vinyle chez G4F Records.",,art/vinyles/vinyle-fading-echo.jpg,,,Boutique=https://g4f-records.myshopify.com/en/products/fading-echo-vinyl-edition
+vinyle-cairn,Cairn,vinyles,vinyle,commune,LP orange · 2026,Un disque orange pour accompagner l'ascension.,,art/vinyles/vinyle-cairn.jpg,,Format=1LP|Année=2026,Boutique=https://g4f-records.myshopify.com/en/products/cairn-vinyl-edition
+vinyle-styx,Styx: Blades of Greed,vinyles,vinyle,commune,LP or · 2026,"Disque doré. Carpenter Brut, Danger, Lorn, The Toxic Avenger au générique.",,art/vinyles/vinyle-styx.jpg,,Format=1LP|Année=2026,Boutique=https://g4f-records.myshopify.com/en/products/styx-blades-of-greed
+vinyle-cthulhu,Cthulhu: The Cosmic Abyss,vinyles,vinyle,commune,LP orange éclaboussé · 2026,Disque orange éclaboussé de noir et de blanc.,,art/vinyles/vinyle-cthulhu.jpg,,Format=1LP|Année=2026,Boutique=https://g4f-records.myshopify.com/en/products/cthulhu-the-cosmic-abyss-vinyl-edition
+vinyle-tides-of-tomorrow,Tides of Tomorrow,vinyles,vinyle,commune,LP jaune translucide · 2026,Jaune translucide éclaboussé de jaune et de bleu.,,art/vinyles/vinyle-tides-of-tomorrow.jpg,,Format=1LP|Année=2026,Boutique=https://g4f-records.myshopify.com/en/products/tides-of-tomorrow-vinyl-edition
+vinyle-endless-legend-2,Endless Legend II,vinyles,vinyle,commune,Double vinyle · 2026,"La suite d'Endless Legend, en double vinyle.",,art/vinyles/vinyle-endless-legend-2.jpg,,Format=2LP|Année=2026,Boutique=https://g4f-records.myshopify.com/en/products/endless-legend-ii-vinyl-edition-pre-order
