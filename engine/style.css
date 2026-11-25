@@ -296,7 +296,39 @@ a { color: inherit; }
 /* Résultat */
 .booster__item { --card: min(13rem, 42vw); display: grid; justify-items: center; gap: 0.5rem; animation: card-in 0.4s ease-out both; animation-delay: calc(var(--i) * 80ms); }
 .booster__item .tcard:not([data-effect="none"]) .tcard__front { box-shadow: 0 0 1.25rem color-mix(in srgb, var(--rarity) 45%, transparent); }
+.booster__item .tcard { cursor: zoom-in; transition: translate 0.2s; }
+.booster__item .tcard:hover { translate: 0 -0.25rem; }
 .booster__price { color: var(--text-soft); font-size: 0.9375rem; }
+
+/* Carte vue de près */
+.inspect {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    padding: 1rem;
+    background: color-mix(in srgb, var(--background) 80%, transparent);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    cursor: zoom-out;
+    animation: booster-in 0.25s ease-out;
+}
+.inspect.is-leaving { opacity: 0; pointer-events: none; transition: opacity 0.36s ease-in; }
+.inspect__hint { max-width: 30rem; color: var(--muted); font-size: 0.875rem; text-align: center; text-wrap: balance; }
+.tcard--inspect { --card: min(24rem, 86vw, calc((100dvh - 8rem) * 5 / 7)); flex: none; perspective: 120rem; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.tcard--inspect.is-dragging { cursor: grabbing; }
+.tcard--inspect img { pointer-events: none; -webkit-user-drag: none; }
+.tcard.tcard--inspect .tcard__inner { transition-duration: 0.15s; }
+.tcard.tcard--inspect.is-settling .tcard__inner { transition-duration: 0.9s; }
+.tcard.tcard--inspect.is-dragging .tcard__inner { transition: none; }
+.tcard--inspect .tcard__text { -webkit-line-clamp: 9; }
+.tcard--inspect .tcard__face { box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.55); }
+.tcard--inspect:not([data-effect="none"]) .tcard__front { box-shadow: 0 0 3rem color-mix(in srgb, var(--rarity) 55%, transparent), 0 1.5rem 3rem rgba(0, 0, 0, 0.55); }
+.tcard--inspect:focus-visible { outline: none; }
 .status-tag { padding: 0.0625rem 0.75rem; border-radius: 999px; background: var(--surface-raised); color: var(--text-soft); font-size: 0.8125rem; font-weight: 600; white-space: nowrap; }
 .status-tag.is-new { background: var(--text); color: var(--background); }
 .booster__stage > .status-tag { position: absolute; bottom: calc(100% + 0.5rem); animation: card-in 0.3s 0.35s ease-out both; }

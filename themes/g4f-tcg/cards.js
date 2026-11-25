@@ -219,5 +219,15 @@ export default [
         "rarity": "commune",
         "subtitle": "Au fond du couloir",
         "text": "Faut bien évacuer le café"
+    },
+    {
+        "id": "shure-sm7b",
+        "name": "Micro Shure SM7B",
+        "album": "matos",
+        "type": "matos",
+        "rarity": "commune",
+        "subtitle": "Un classique",
+        "text": "Pour avoir une voix bien suave pour un podcast ou juste en 16kHz mono sur teams",
+        "image": "art/matos/shure_sm7_b.jpg"
     }
 ];

@@ -702,7 +702,7 @@ De haut en bas : **bannière**, grand titre et slogan, **barre de collection**, 
 | Paquet | Flotte doucement. Glisser en travers le déchire (ouvert à 70 % de sa largeur) ; clic ou Entrée l'ouvre. Prix affiché. « Plus tard ». |
 | Déchirure | La bande du haut (16 %) s'envole, le reste tombe ; 750 ms |
 | Cartes | Une à la fois, de dos, sur la pile restante. « Tout retourner » mène au résultat. |
-| Résultat | Toutes les cartes, « Nouveau +10 » ou « Double », revente des doubles du booster, autre booster |
+| Résultat | Toutes les cartes, « Nouveau +10 » ou « Double », revente des doubles du booster, autre booster. Un clic sur une carte la montre de près (voir plus bas). |
 
 **Clics sur une carte** (à respecter exactement) :
 
@@ -717,6 +717,14 @@ De haut en bas : **bannière**, grand titre et slogan, **barre de collection**, 
 | Délai avant qu'un clic passe à la suivante | 220 ms |
 | Sortie de la carte | 180 ms, `translateX(120%) rotate(16deg)` |
 | Entrée de la carte | 150 ms |
+
+**Carte vue de près** (écran de résultat) :
+
+- un clic sur une des cartes l'envoie au centre en grand (420 ms, avec un tour complet sur elle-même) ; sa place reste vide, le reste est flouté ;
+- glisser fait tourner la carte (horizontalement sans limite, verticalement de ±35°) ; lâchée, elle se pose sur sa face la plus proche, recto ou verso ;
+- un clic sur la carte, Entrée ou Espace la retourne ; les flèches ← → la tournent de 30° ; à la souris, elle penche un peu vers le pointeur et son reflet le suit ;
+- un clic à côté, ou Échap, la renvoie à sa place en 360 ms, sur son recto ; Échap ne ferme alors pas le booster ;
+- on peut ensuite en regarder une autre ; changer d'écran ou fermer le booster repose la carte sans animation.
 
 | Effet | Retournement | Anneau | Rayons | Reflet | Particules, suspense | Autre |
 |---|---|---|---|---|---|---|
@@ -1075,6 +1083,7 @@ export function createBooster({ player, pack: packTexts, size, draw, describe, o
     let opened = 0;
 
     function setPhase(phase) {
+        putBack?.(true);
         overlay.dataset.phase = phase;
         overlay.classList.remove('is-flashing');
         overlay.scrollTop = 0;
@@ -1281,8 +1290,10 @@ export function createBooster({ player, pack: packTexts, size, draw, describe, o
         setText(title, player.isComplete ? 'cards_complete' : 'cards_summary_title');
         setText(hint, 'cards_summary_hint');
         stage.replaceChildren(...drawn.map(({ card, isNew, reward }, i) => {
-            const node = createCard('div', card, describe(card), cards.indexOf(card) + 1, cards.length);
+            const node = createCard('button', card, describe(card), cards.indexOf(card) + 1, cards.length);
             node.classList.add('is-flipped');
+            node.setAttribute('aria-label', `${t('cards_inspect')} : ${describe(card).name}`);
+            node.addEventListener('click', () => inspect(node, card));
             const item = el('div', 'booster__item', {}, node, statusTag(isNew, reward));
             item.style.setProperty('--i', i);
             return item;
@@ -1308,6 +1319,149 @@ export function createBooster({ player, pack: packTexts, size, draw, describe, o
         }, ' ', coins(value, '+')));
     }
 
+    // --- 4. Une carte de près ---
+
+    let putBack = null; // repose la carte vue de près, s'il y en a une
+
+    /**
+     * La carte quitte sa place pour le centre de l'écran, en grand. On la fait tourner en la glissant (ou avec les flèches),
+     * un clic la retourne ; un clic à côté, ou Échap, la repose parmi les autres.
+     */
+    function inspect(source, card) {
+        putBack?.(true);
+        const big = createCard('div', card, describe(card), cards.indexOf(card) + 1, cards.length);
+        big.classList.add('is-flipped', 'tcard--inspect');
+        big.tabIndex = 0;
+        big.setAttribute('role', 'img');
+        big.setAttribute('aria-label', `${describe(card).name}, ${t(`rarity_${card.rarity.id}`)}. ${t('cards_inspect_hint')}`);
+        const layer = el('div', 'inspect', {}, big, text('p', 'inspect__hint', 'cards_inspect_hint'));
+        overlay.append(layer);
+        source.style.visibility = 'hidden';
+        const isAnimated = !reducedMotion();
+
+        // Inclinaison : rotation choisie (glisser, flèches, clic) + léger penchant vers la souris.
+        const turn = { x: 0, y: 0 };
+        const lean = { x: 0, y: 0 };
+        const apply = () => {
+            big.style.setProperty('--tilt-x', `${turn.x + lean.x}deg`);
+            big.style.setProperty('--tilt-y', `${turn.y + lean.y}deg`);
+        };
+        let settleTimer = 0;
+        /** Mouvement long et amorti (arrivée, carte retournée, carte lâchée) plutôt que le suivi immédiat du pointeur. */
+        const settle = () => {
+            big.classList.add('is-settling');
+            clearTimeout(settleTimer);
+            settleTimer = setTimeout(() => big.classList.remove('is-settling'), 900);
+        };
+        const facing = () => Math.round(turn.y / 180) * 180; // face la plus proche : recto ou verso
+
+        // Trajet entre la place de la carte et le centre de l'écran.
+        const path = () => {
+            const from = source.getBoundingClientRect();
+            const to = big.getBoundingClientRect();
+            const dx = from.left + from.width / 2 - (to.left + to.width / 2);
+            const dy = from.top + from.height / 2 - (to.top + to.height / 2);
+            return [{ transform: `translate(${dx}px, ${dy}px) scale(${from.width / to.width})` }, { transform: 'none' }];
+        };
+        if (isAnimated) {
+            big.animate(path(), { duration: 420, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' });
+            // Un tour complet en arrivant.
+            big.classList.add('is-dragging');
+            turn.y = -360;
+            apply();
+            big.getBoundingClientRect();
+            big.classList.remove('is-dragging');
+            turn.y = 0;
+            settle();
+            apply();
+        }
+
+        let drag = null;
+        big.addEventListener('pointerdown', (event) => {
+            if (event.button !== 0) return;
+            drag = { x: event.clientX, y: event.clientY, turn: { ...turn }, moved: false };
+            big.setPointerCapture(event.pointerId);
+        });
+        big.addEventListener('pointermove', (event) => {
+            const box = big.getBoundingClientRect();
+            const px = (event.clientX - box.left) / box.width;
+            const py = (event.clientY - box.top) / box.height;
+            big.style.setProperty('--mx', `${px * 100}%`);
+            big.style.setProperty('--my', `${py * 100}%`);
+            if (drag) {
+                const dx = event.clientX - drag.x;
+                const dy = event.clientY - drag.y;
+                if (!drag.moved && Math.hypot(dx, dy) < CLICK_THRESHOLD) return;
+                drag.moved = true;
+                big.classList.add('is-dragging');
+                lean.x = lean.y = 0;
+                turn.y = drag.turn.y + dx * 0.6;
+                turn.x = Math.max(-35, Math.min(35, drag.turn.x - dy * 0.35));
+            } else if (event.pointerType !== 'touch' && isAnimated) {
+                lean.x = (0.5 - py) * 14;
+                lean.y = (px - 0.5) * 14;
+            }
+            apply();
+        });
+        const release = () => {
+            if (!drag) return;
+            const wasClick = !drag.moved;
+            drag = null;
+            big.classList.remove('is-dragging');
+            turn.x = 0;
+            turn.y = wasClick ? facing() + 180 : facing(); // un clic retourne la carte, un glisser se pose sur la face la plus proche
+            settle();
+            apply();
+        };
+        big.addEventListener('pointerup', release);
+        big.addEventListener('pointercancel', release);
+        big.addEventListener('pointerleave', () => {
+            if (drag) return;
+            lean.x = lean.y = 0;
+            for (const name of ['--mx', '--my']) big.style.removeProperty(name);
+            apply();
+        });
+
+        layer.addEventListener('keydown', (event) => {
+            const step = { ArrowLeft: -30, ArrowRight: 30 }[event.key];
+            if (event.key === 'Escape') putDown();
+            else if (step || event.key === 'Enter' || event.key === ' ') {
+                turn.y = step ? turn.y + step : facing() + 180;
+                settle();
+                apply();
+            } else return;
+            event.preventDefault();
+            event.stopPropagation(); // Échap ne ferme que l'aperçu, pas le booster
+        });
+        layer.addEventListener('click', (event) => {
+            if (!big.contains(event.target)) putDown();
+        });
+        big.focus({ preventScroll: true });
+
+        /** isInstant : sans animation ni retour du focus (le booster change d'écran ou se ferme). */
+        function putDown(isInstant = false) {
+            if (putBack !== putDown) return;
+            putBack = null;
+            clearTimeout(settleTimer);
+            const done = () => {
+                layer.remove();
+                source.style.visibility = '';
+                if (!isInstant) source.focus({ preventScroll: true });
+            };
+            if (isInstant || !isAnimated) {
+                done();
+                return;
+            }
+            layer.classList.add('is-leaving');
+            turn.x = lean.x = lean.y = 0;
+            turn.y = Math.round(turn.y / 360) * 360; // revient sur son recto
+            settle();
+            apply();
+            big.animate(path().reverse(), { duration: 360, easing: 'cubic-bezier(0.4, 0, 0.6, 1)', fill: 'forwards' }).finished.then(done, done);
+        }
+        putBack = putDown;
+    }
+
     // --- Ouverture et fermeture ---
 
     function open({ isWelcome = false } = {}) {
@@ -1319,6 +1473,7 @@ export function createBooster({ player, pack: packTexts, size, draw, describe, o
 
     function close() {
         session++;
+        putBack?.(true);
         modal.close();
         stage.replaceChildren();
         onClose(opened);
@@ -1467,10 +1622,11 @@ export function createCard(tag, card, info, number, total) {
     return node;
 }
 
-/** La carte s'incline vers le pointeur et son reflet le suit. */
+/** La carte s'incline vers le pointeur et son reflet le suit. Une carte vue de près (booster.js) gère elle-même son inclinaison. */
 function followPointer(node) {
+    const isFree = () => !node.classList.contains('tcard--inspect');
     node.addEventListener('pointermove', (event) => {
-        if (event.pointerType === 'touch' || reducedMotion()) return;
+        if (event.pointerType === 'touch' || reducedMotion() || !isFree()) return;
         const box = node.getBoundingClientRect();
         const x = (event.clientX - box.left) / box.width;
         const y = (event.clientY - box.top) / box.height;
@@ -1480,7 +1636,7 @@ function followPointer(node) {
         node.style.setProperty('--tilt-y', `${(x - 0.5) * 18}deg`);
     });
     node.addEventListener('pointerleave', () => {
-        for (const name of ['--mx', '--my', '--tilt-x', '--tilt-y']) node.style.removeProperty(name);
+        if (isFree()) for (const name of ['--mx', '--my', '--tilt-x', '--tilt-y']) node.style.removeProperty(name);
     });
 }
 
@@ -3348,7 +3504,9 @@ export const STRINGS = {
     cards_next_hint: 'Cliquez encore pour la carte suivante',
     cards_end_hint: 'Cliquez encore pour voir votre booster',
     cards_summary_title: 'Votre booster',
-    cards_summary_hint: 'Ces cartes ont rejoint votre collection',
+    cards_summary_hint: 'Ces cartes ont rejoint votre collection. Cliquez sur une carte pour la voir de près',
+    cards_inspect: 'Voir de près',
+    cards_inspect_hint: 'Glissez pour faire tourner la carte, cliquez dessus pour la retourner, cliquez à côté pour la reposer',
     cards_face_down: 'Carte face cachée',
     cards_skip: 'Tout retourner',
     cards_later: 'Plus tard',
@@ -3791,7 +3949,39 @@ a { color: inherit; }
 /* Résultat */
 .booster__item { --card: min(13rem, 42vw); display: grid; justify-items: center; gap: 0.5rem; animation: card-in 0.4s ease-out both; animation-delay: calc(var(--i) * 80ms); }
 .booster__item .tcard:not([data-effect="none"]) .tcard__front { box-shadow: 0 0 1.25rem color-mix(in srgb, var(--rarity) 45%, transparent); }
+.booster__item .tcard { cursor: zoom-in; transition: translate 0.2s; }
+.booster__item .tcard:hover { translate: 0 -0.25rem; }
 .booster__price { color: var(--text-soft); font-size: 0.9375rem; }
+
+/* Carte vue de près */
+.inspect {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    padding: 1rem;
+    background: color-mix(in srgb, var(--background) 80%, transparent);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    cursor: zoom-out;
+    animation: booster-in 0.25s ease-out;
+}
+.inspect.is-leaving { opacity: 0; pointer-events: none; transition: opacity 0.36s ease-in; }
+.inspect__hint { max-width: 30rem; color: var(--muted); font-size: 0.875rem; text-align: center; text-wrap: balance; }
+.tcard--inspect { --card: min(24rem, 86vw, calc((100dvh - 8rem) * 5 / 7)); flex: none; perspective: 120rem; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.tcard--inspect.is-dragging { cursor: grabbing; }
+.tcard--inspect img { pointer-events: none; -webkit-user-drag: none; }
+.tcard.tcard--inspect .tcard__inner { transition-duration: 0.15s; }
+.tcard.tcard--inspect.is-settling .tcard__inner { transition-duration: 0.9s; }
+.tcard.tcard--inspect.is-dragging .tcard__inner { transition: none; }
+.tcard--inspect .tcard__text { -webkit-line-clamp: 9; }
+.tcard--inspect .tcard__face { box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.55); }
+.tcard--inspect:not([data-effect="none"]) .tcard__front { box-shadow: 0 0 3rem color-mix(in srgb, var(--rarity) 55%, transparent), 0 1.5rem 3rem rgba(0, 0, 0, 0.55); }
+.tcard--inspect:focus-visible { outline: none; }
 .status-tag { padding: 0.0625rem 0.75rem; border-radius: 999px; background: var(--surface-raised); color: var(--text-soft); font-size: 0.8125rem; font-weight: 600; white-space: nowrap; }
 .status-tag.is-new { background: var(--text); color: var(--background); }
 .booster__stage > .status-tag { position: absolute; bottom: calc(100% + 0.5rem); animation: card-in 0.3s 0.35s ease-out both; }

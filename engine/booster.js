@@ -32,6 +32,7 @@ export function createBooster({ player, pack: packTexts, size, draw, describe, o
     let opened = 0;
 
     function setPhase(phase) {
+        putBack?.(true);
         overlay.dataset.phase = phase;
         overlay.classList.remove('is-flashing');
         overlay.scrollTop = 0;
@@ -238,8 +239,10 @@ export function createBooster({ player, pack: packTexts, size, draw, describe, o
         setText(title, player.isComplete ? 'cards_complete' : 'cards_summary_title');
         setText(hint, 'cards_summary_hint');
         stage.replaceChildren(...drawn.map(({ card, isNew, reward }, i) => {
-            const node = createCard('div', card, describe(card), cards.indexOf(card) + 1, cards.length);
+            const node = createCard('button', card, describe(card), cards.indexOf(card) + 1, cards.length);
             node.classList.add('is-flipped');
+            node.setAttribute('aria-label', `${t('cards_inspect')} : ${describe(card).name}`);
+            node.addEventListener('click', () => inspect(node, card));
             const item = el('div', 'booster__item', {}, node, statusTag(isNew, reward));
             item.style.setProperty('--i', i);
             return item;
@@ -265,6 +268,149 @@ export function createBooster({ player, pack: packTexts, size, draw, describe, o
         }, ' ', coins(value, '+')));
     }
 
+    // --- 4. Une carte de près ---
+
+    let putBack = null; // repose la carte vue de près, s'il y en a une
+
+    /**
+     * La carte quitte sa place pour le centre de l'écran, en grand. On la fait tourner en la glissant (ou avec les flèches),
+     * un clic la retourne ; un clic à côté, ou Échap, la repose parmi les autres.
+     */
+    function inspect(source, card) {
+        putBack?.(true);
+        const big = createCard('div', card, describe(card), cards.indexOf(card) + 1, cards.length);
+        big.classList.add('is-flipped', 'tcard--inspect');
+        big.tabIndex = 0;
+        big.setAttribute('role', 'img');
+        big.setAttribute('aria-label', `${describe(card).name}, ${t(`rarity_${card.rarity.id}`)}. ${t('cards_inspect_hint')}`);
+        const layer = el('div', 'inspect', {}, big, text('p', 'inspect__hint', 'cards_inspect_hint'));
+        overlay.append(layer);
+        source.style.visibility = 'hidden';
+        const isAnimated = !reducedMotion();
+
+        // Inclinaison : rotation choisie (glisser, flèches, clic) + léger penchant vers la souris.
+        const turn = { x: 0, y: 0 };
+        const lean = { x: 0, y: 0 };
+        const apply = () => {
+            big.style.setProperty('--tilt-x', `${turn.x + lean.x}deg`);
+            big.style.setProperty('--tilt-y', `${turn.y + lean.y}deg`);
+        };
+        let settleTimer = 0;
+        /** Mouvement long et amorti (arrivée, carte retournée, carte lâchée) plutôt que le suivi immédiat du pointeur. */
+        const settle = () => {
+            big.classList.add('is-settling');
+            clearTimeout(settleTimer);
+            settleTimer = setTimeout(() => big.classList.remove('is-settling'), 900);
+        };
+        const facing = () => Math.round(turn.y / 180) * 180; // face la plus proche : recto ou verso
+
+        // Trajet entre la place de la carte et le centre de l'écran.
+        const path = () => {
+            const from = source.getBoundingClientRect();
+            const to = big.getBoundingClientRect();
+            const dx = from.left + from.width / 2 - (to.left + to.width / 2);
+            const dy = from.top + from.height / 2 - (to.top + to.height / 2);
+            return [{ transform: `translate(${dx}px, ${dy}px) scale(${from.width / to.width})` }, { transform: 'none' }];
+        };
+        if (isAnimated) {
+            big.animate(path(), { duration: 420, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' });
+            // Un tour complet en arrivant.
+            big.classList.add('is-dragging');
+            turn.y = -360;
+            apply();
+            big.getBoundingClientRect();
+            big.classList.remove('is-dragging');
+            turn.y = 0;
+            settle();
+            apply();
+        }
+
+        let drag = null;
+        big.addEventListener('pointerdown', (event) => {
+            if (event.button !== 0) return;
+            drag = { x: event.clientX, y: event.clientY, turn: { ...turn }, moved: false };
+            big.setPointerCapture(event.pointerId);
+        });
+        big.addEventListener('pointermove', (event) => {
+            const box = big.getBoundingClientRect();
+            const px = (event.clientX - box.left) / box.width;
+            const py = (event.clientY - box.top) / box.height;
+            big.style.setProperty('--mx', `${px * 100}%`);
+            big.style.setProperty('--my', `${py * 100}%`);
+            if (drag) {
+                const dx = event.clientX - drag.x;
+                const dy = event.clientY - drag.y;
+                if (!drag.moved && Math.hypot(dx, dy) < CLICK_THRESHOLD) return;
+                drag.moved = true;
+                big.classList.add('is-dragging');
+                lean.x = lean.y = 0;
+                turn.y = drag.turn.y + dx * 0.6;
+                turn.x = Math.max(-35, Math.min(35, drag.turn.x - dy * 0.35));
+            } else if (event.pointerType !== 'touch' && isAnimated) {
+                lean.x = (0.5 - py) * 14;
+                lean.y = (px - 0.5) * 14;
+            }
+            apply();
+        });
+        const release = () => {
+            if (!drag) return;
+            const wasClick = !drag.moved;
+            drag = null;
+            big.classList.remove('is-dragging');
+            turn.x = 0;
+            turn.y = wasClick ? facing() + 180 : facing(); // un clic retourne la carte, un glisser se pose sur la face la plus proche
+            settle();
+            apply();
+        };
+        big.addEventListener('pointerup', release);
+        big.addEventListener('pointercancel', release);
+        big.addEventListener('pointerleave', () => {
+            if (drag) return;
+            lean.x = lean.y = 0;
+            for (const name of ['--mx', '--my']) big.style.removeProperty(name);
+            apply();
+        });
+
+        layer.addEventListener('keydown', (event) => {
+            const step = { ArrowLeft: -30, ArrowRight: 30 }[event.key];
+            if (event.key === 'Escape') putDown();
+            else if (step || event.key === 'Enter' || event.key === ' ') {
+                turn.y = step ? turn.y + step : facing() + 180;
+                settle();
+                apply();
+            } else return;
+            event.preventDefault();
+            event.stopPropagation(); // Échap ne ferme que l'aperçu, pas le booster
+        });
+        layer.addEventListener('click', (event) => {
+            if (!big.contains(event.target)) putDown();
+        });
+        big.focus({ preventScroll: true });
+
+        /** isInstant : sans animation ni retour du focus (le booster change d'écran ou se ferme). */
+        function putDown(isInstant = false) {
+            if (putBack !== putDown) return;
+            putBack = null;
+            clearTimeout(settleTimer);
+            const done = () => {
+                layer.remove();
+                source.style.visibility = '';
+                if (!isInstant) source.focus({ preventScroll: true });
+            };
+            if (isInstant || !isAnimated) {
+                done();
+                return;
+            }
+            layer.classList.add('is-leaving');
+            turn.x = lean.x = lean.y = 0;
+            turn.y = Math.round(turn.y / 360) * 360; // revient sur son recto
+            settle();
+            apply();
+            big.animate(path().reverse(), { duration: 360, easing: 'cubic-bezier(0.4, 0, 0.6, 1)', fill: 'forwards' }).finished.then(done, done);
+        }
+        putBack = putDown;
+    }
+
     // --- Ouverture et fermeture ---
 
     function open({ isWelcome = false } = {}) {
@@ -276,6 +422,7 @@ export function createBooster({ player, pack: packTexts, size, draw, describe, o
 
     function close() {
         session++;
+        putBack?.(true);
         modal.close();
         stage.replaceChildren();
         onClose(opened);

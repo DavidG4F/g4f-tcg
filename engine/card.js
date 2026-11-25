@@ -74,10 +74,11 @@ export function createCard(tag, card, info, number, total) {
     return node;
 }
 
-/** La carte s'incline vers le pointeur et son reflet le suit. */
+/** La carte s'incline vers le pointeur et son reflet le suit. Une carte vue de près (booster.js) gère elle-même son inclinaison. */
 function followPointer(node) {
+    const isFree = () => !node.classList.contains('tcard--inspect');
     node.addEventListener('pointermove', (event) => {
-        if (event.pointerType === 'touch' || reducedMotion()) return;
+        if (event.pointerType === 'touch' || reducedMotion() || !isFree()) return;
         const box = node.getBoundingClientRect();
         const x = (event.clientX - box.left) / box.width;
         const y = (event.clientY - box.top) / box.height;
@@ -87,7 +88,7 @@ function followPointer(node) {
         node.style.setProperty('--tilt-y', `${(x - 0.5) * 18}deg`);
     });
     node.addEventListener('pointerleave', () => {
-        for (const name of ['--mx', '--my', '--tilt-x', '--tilt-y']) node.style.removeProperty(name);
+        if (isFree()) for (const name of ['--mx', '--my', '--tilt-x', '--tilt-y']) node.style.removeProperty(name);
     });
 }
 
