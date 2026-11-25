@@ -5471,24 +5471,31 @@ function readCsv(name) {
     let row = [];
     let cell = '';
     let quoted = false;
+    let line = 1; // numéro de ligne dans le fichier, pour les messages : les lignes vides sont sautées mais comptées
+    let rowLine = 1;
     for (let i = 0; i < text.length; i++) {
         const letter = text[i];
         if (quoted) {
             if (letter === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (letter === '"') quoted = false;
             else cell += letter;
+            if (letter === '\n') line++;
         } else if (letter === '"' && cell === '') quoted = true;
         else if (letter === separator || letter === '\n') {
             row.push(cell.trim());
             cell = '';
             if (letter === '\n') {
-                if (row.some(Boolean)) rows.push(row);
+                if (row.some(Boolean)) rows.push({ cells: row, line: rowLine });
                 row = [];
+                rowLine = ++line;
             }
         } else cell += letter;
     }
     if (quoted) fail(`${name} : un guillemet n'est pas refermé`);
-    const [columns, ...lines] = rows;
-    return lines.map((line) => Object.fromEntries(columns.map((column, i) => [column.toLowerCase(), line[i] ?? ''])));
+    const [{ cells: columns }, ...lines] = rows;
+    return lines.map(({ cells, line: at }) => {
+        const entry = Object.fromEntries(columns.map((column, i) => [column.toLowerCase(), cells[i] ?? '']));
+        return Object.defineProperty(entry, 'line', { value: at }); // hors des colonnes
+    });
 }
 
 const errors = [];
@@ -5507,7 +5514,7 @@ const unknown = Object.keys(rows[0] ?? {}).filter((column) => column && !COLUMNS
 if (unknown.length) errors.push(`cards.csv : colonnes inconnues : ${unknown.join(', ')}`);
 const seen = new Set();
 const cards = rows.map((row, i) => {
-    const at = `cards.csv ligne ${i + 2}${row.id ? ` (${row.id})` : ''}`;
+    const at = `cards.csv ligne ${row.line}${row.id ? ` (${row.id})` : ''}`;
     for (const column of REQUIRED) if (!row[column]) errors.push(`${at} : ${column} est vide`);
     if (row.id && !/^[a-z0-9-]+$/.test(row.id)) errors.push(`${at} : id en minuscules, chiffres et tirets seulement`);
     if (row.id && seen.has(row.id)) errors.push(`${at} : id déjà utilisé`);
@@ -5519,8 +5526,8 @@ const cards = rows.map((row, i) => {
     if (row.embed) card.embed = { src: row.embed, ...(Number(row.embed_height) > 0 ? { height: Number(row.embed_height) } : {}) };
     return card;
 });
-const albums = readCsv('albums.csv').map(({ id, label }, i) => {
-    if (!id || !label) errors.push(`albums.csv ligne ${i + 2} : id et label attendus`);
+const albums = readCsv('albums.csv').map(({ id, label, line }) => {
+    if (!id || !label) errors.push(`albums.csv ligne ${line} : id et label attendus`);
     return { id, label };
 });
 if (errors.length) fail(errors);
